@@ -19,7 +19,8 @@ const COLUMNS = [
 ];
 
 function escapeCell(value) {
-  const s = value == null ? "" : String(value);
+  const raw = value == null ? "" : String(value);
+  const s = /^[=+\-@\t\r]/.test(raw) ? `'${raw}` : raw;
   // Quote when the value contains a comma, quote, or newline (RFC 4180).
   if (/[",\r\n]/.test(s)) {
     return `"${s.replace(/"/g, '""')}"`;

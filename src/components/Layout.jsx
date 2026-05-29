@@ -31,7 +31,7 @@ export default function Layout() {
   return (
     <div className="flex min-h-screen flex-col">
       <header className="sticky top-0 z-40 border-b border-line bg-paper/85 backdrop-blur">
-        <div className="mx-auto flex max-w-5xl items-center justify-between gap-3 px-4 py-3">
+        <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-3 px-4 py-3">
           <Link to="/" className="flex items-center gap-2" aria-label="ApplyGuard PH home">
             <ShieldMark />
             <span className="font-display text-xl font-semibold leading-none text-ink">
@@ -42,7 +42,7 @@ export default function Layout() {
             </span>
           </Link>
 
-          <nav aria-label="Primary" className="flex items-center gap-1 sm:gap-2">
+          <nav aria-label="Primary" className="flex w-full items-center justify-between gap-1 sm:w-auto sm:justify-start sm:gap-2">
             {NAV.map((item) => (
               <NavLink
                 key={item.to}

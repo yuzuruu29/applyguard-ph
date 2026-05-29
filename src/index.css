@@ -20,7 +20,7 @@
   /* ink */
   --color-ink: #1b1a17;
   --color-ink-soft: #4a4842;
-  --color-ink-faint: #7c786d;
+  --color-ink-faint: #6f6a60;
 
   /* brand */
   --color-brand: #0b6e5f;
@@ -62,8 +62,9 @@ body {
 /* visible, on-brand focus ring for keyboard users */
 :focus-visible {
   outline: 2px solid var(--color-brand);
-  outline-offset: 2px;
+  outline-offset: 3px;
   border-radius: 4px;
+  box-shadow: 0 0 0 4px rgb(11 110 95 / 0.18);
 }
 
 /* ── small reusable bits the utility classes can't express cleanly ── */

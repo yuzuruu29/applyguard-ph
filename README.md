@@ -94,7 +94,7 @@ which makes them easy to test:
 The scanner is free and never gated. The only money links are **external, one-time purchases**
 on the Offers page (Message Pack / Application Review / Profile Setup) plus a review CTA that
 appears **only after a scan result is shown**. There is no subscription, no "Pro" tier, and no
-in-app payment. Update the placeholder store URLs in `src/components/OffersPage.jsx` before launch.
+in-app payment. Checkout links are not rendered until real store pages are ready.
 
 ## Privacy
 

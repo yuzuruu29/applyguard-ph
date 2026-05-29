@@ -321,21 +321,21 @@ export default function ResultView() {
         </section>
       )}
 
-      {/* ── POST-RESULT review CTA (only here, only after a result) ── */}
+      {/* ── POST-RESULT optional extras CTA (only here, only after a result) ── */}
       <section className="rounded-3xl border border-brand/40 bg-brand/5 p-6 sm:p-8">
-        <p className="eyebrow text-brand-deep">Optional, one-time</p>
+        <p className="eyebrow text-brand-deep">Optional extras</p>
         <h2 className="mt-2 font-display text-2xl text-ink">
-          Want your actual application reviewed before you send it?
+          Want more help after the scan?
         </h2>
         <p className="mt-2 max-w-2xl text-ink-soft">
-          A human reads your message and resume, tells you what a hiring manager will think,
-          and shows you what to fix. No subscription, you pay once.
+          Paid add-ons are listed separately, but checkout is not active yet. The scanner stays
+          free and usable without buying anything.
         </p>
         <Link
           to="/offers"
           className="mt-5 inline-block rounded-full bg-brand px-6 py-3 font-semibold text-paper hover:bg-brand-deep"
         >
-          See the review service
+          See optional extras
         </Link>
       </section>
     </div>

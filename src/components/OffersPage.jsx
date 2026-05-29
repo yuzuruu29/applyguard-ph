@@ -1,50 +1,43 @@
 import { Link } from "react-router-dom";
 
-// External one-time-purchase links. No in-app payments, no subscriptions.
-// TODO(owner): point these at your real store pages (Gumroad / Lemon Squeezy / etc.).
-const STORE = "https://applyguardph.gumroad.com/l";
-
 const OFFERS = [
   {
     id: "message-pack",
     name: "Message Pack",
-    price: "₱199",
+    price: "Not live yet",
     blurb: "A one-time set of templates you edit and send.",
     points: [
       "20 message templates: cold applications, follow-ups, rate talk",
       "Polite scripts for asking a sketchy poster the right questions",
       "Works with the prompts this scanner gives you",
     ],
-    cta: "Get the Message Pack",
-    href: `${STORE}/message-pack`,
+    cta: "Checkout not available",
     featured: false,
   },
   {
     id: "review",
     name: "Application Review",
-    price: "₱499",
-    blurb: "A human reads your application before you send it.",
+    price: "Not live yet",
+    blurb: "A planned review option for your application before you send it.",
     points: [
-      "Send your message and resume, get line-by-line notes back",
-      "A rewrite you can copy, plus what a hiring manager will think",
-      "Turnaround within 48 hours",
+      "Line-by-line notes on your message and resume",
+      "Rewrite guidance you can adapt before applying",
+      "Availability and turnaround shown only when checkout is ready",
     ],
-    cta: "Book a review",
-    href: `${STORE}/application-review`,
+    cta: "Checkout not available",
     featured: true,
   },
   {
     id: "setup",
     name: "Profile Setup",
-    price: "₱899",
-    blurb: "We set up the profile that recruiters actually read.",
+    price: "Not live yet",
+    blurb: "A planned profile-help option for job boards and freelance platforms.",
     points: [
       "OnlineJobs.ph or Upwork profile, headline, and overview",
       "Built around the roles you want and your real strengths",
-      "One session, yours to keep",
+      "Details shown only when the service is ready",
     ],
-    cta: "Set up my profile",
-    href: `${STORE}/profile-setup`,
+    cta: "Checkout not available",
     featured: false,
   },
 ];
@@ -55,11 +48,11 @@ export default function OffersPage() {
       <header>
         <p className="eyebrow">Optional extras</p>
         <h1 className="mt-2 font-display text-3xl text-ink sm:text-4xl">
-          The scanner is free. These are for when you want a hand.
+          The scanner is free. Optional extras can wait.
         </h1>
         <p className="mt-3 max-w-2xl text-ink-soft">
-          Buy one once if it helps. There's no subscription and nothing recurring. This is what
-          keeps ApplyGuard free for everyone else.
+          These paid add-ons are listed for transparency, but checkout is not active yet. No
+          external store links are live on this site.
         </p>
       </header>
 
@@ -90,19 +83,21 @@ export default function OffersPage() {
                 </li>
               ))}
             </ul>
-            <a
-              href={offer.href}
-              target="_blank"
-              rel="noopener noreferrer"
+            <button
+              type="button"
+              disabled
+              aria-disabled="true"
               className={`mt-6 rounded-full px-5 py-3 text-center font-semibold transition-colors ${
                 offer.featured
-                  ? "bg-brand text-paper hover:bg-brand-deep"
-                  : "border border-ink/15 bg-paper text-ink hover:border-brand hover:text-brand"
+                  ? "cursor-not-allowed bg-brand/70 text-paper"
+                  : "cursor-not-allowed border border-ink/15 bg-paper text-ink-faint"
               }`}
             >
               {offer.cta}
-            </a>
-            <p className="mt-2 text-center text-xs text-ink-faint">Opens an external checkout.</p>
+            </button>
+            <p className="mt-2 text-center text-xs text-ink-faint">
+              External checkout will be added only after the real store page is ready.
+            </p>
           </div>
         ))}
       </div>
