@@ -13,8 +13,8 @@ const RATE_TYPES = ["Not stated", "Hourly", "Weekly", "Monthly", "Yearly", "Per 
 const HOURS = ["Not stated", "Under 20", "20–40", "40+"];
 
 const labelCls = "mb-1.5 block text-sm font-medium text-ink";
-const inputCls =
-  "w-full rounded-xl border border-line bg-card px-3.5 py-2.5 text-ink placeholder:text-ink-faint focus:border-brand focus:outline-none focus-visible:outline-none";
+const fieldInputCls =
+  "field-input w-full rounded-xl bg-transparent px-3.5 py-2.5 text-ink placeholder:text-ink-faint focus:outline-none";
 
 function Field({ id, label, hint, children }) {
   return (
@@ -23,6 +23,17 @@ function Field({ id, label, hint, children }) {
         {label}
         {hint && <span className="ml-1.5 font-normal text-ink-faint">{hint}</span>}
       </label>
+      {children}
+    </div>
+  );
+}
+
+// Lighter sibling of the paste slip: a lift/glow frame with a growing
+// underline accent on focus. Wraps a single input or select.
+function FieldFrame({ children }) {
+  return (
+    <div className="field-frame flex rounded-xl border border-line bg-card">
+      <span className="field-accent" aria-hidden="true" />
       {children}
     </div>
   );
@@ -81,6 +92,11 @@ export default function ScanForm() {
     document.getElementById("rawText")?.focus({ preventScroll: true });
   };
 
+  const trimmed = rawText.trim();
+  const hasText = trimmed.length > 0;
+  const charCount = rawText.length;
+  const wordCount = trimmed ? trimmed.split(/\s+/).length : 0;
+
   return (
     <div className="space-y-10">
       {/* ── Hero ───────────────────────────────────────────────── */}
@@ -133,19 +149,49 @@ export default function ScanForm() {
 
         <div className="elev space-y-6 rounded-3xl border border-line bg-card p-5 sm:p-7">
           <Field id="rawText" label="Paste the job post" hint="the whole thing — title, description, contact">
-            <textarea
-              id="rawText"
-              value={rawText}
-              onChange={(e) => {
-                setRawText(e.target.value);
-                if (error) setError("");
-              }}
-              rows={8}
-              placeholder="Paste everything the employer wrote here…"
-              className={`${inputCls} min-h-44 resize-y leading-relaxed`}
-              aria-invalid={Boolean(error)}
-              aria-describedby={error ? "rawText-error" : undefined}
-            />
+            <div
+              className={`paste-frame flex flex-col rounded-2xl border bg-card ${
+                error ? "paste-shake border-stop" : "border-line"
+              }`}
+            >
+              <span className="paste-accent" aria-hidden="true" />
+              <span className="paste-corner tl" aria-hidden="true" />
+              <span className="paste-corner tr" aria-hidden="true" />
+              <span className="paste-corner bl" aria-hidden="true" />
+              <span className="paste-corner br" aria-hidden="true" />
+              <textarea
+                id="rawText"
+                value={rawText}
+                onChange={(e) => {
+                  setRawText(e.target.value);
+                  if (error) setError("");
+                }}
+                rows={8}
+                placeholder="Paste everything the employer wrote here…"
+                className="paste-area min-h-44 w-full resize-y rounded-2xl bg-transparent px-4 py-3.5 leading-relaxed text-ink placeholder:text-ink-faint"
+                aria-invalid={Boolean(error)}
+                aria-describedby={error ? "rawText-error" : "rawText-meta"}
+              />
+            </div>
+
+            <div
+              id="rawText-meta"
+              className="mt-2 flex items-center justify-between gap-3 px-1 text-xs"
+            >
+              <span className="inline-flex items-center gap-1.5">
+                <span
+                  className={`h-2 w-2 rounded-full ${hasText ? "bg-go" : "dot-ready bg-brand"}`}
+                  aria-hidden="true"
+                />
+                <span className={`font-medium ${hasText ? "text-go-ink" : "text-ink-faint"}`}>
+                  {hasText ? "Post added" : "Ready to scan"}
+                </span>
+              </span>
+              <span className="font-mono text-ink-faint" aria-hidden="true">
+                {charCount.toLocaleString()} chars · {wordCount} {wordCount === 1 ? "word" : "words"}
+              </span>
+            </div>
+
             {error && (
               <p id="rawText-error" className="mt-2 text-sm font-medium text-stop-ink">
                 {error}
@@ -155,84 +201,96 @@ export default function ScanForm() {
 
           <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
             <Field id="role" label="Role you're after" hint="optional">
-              <input
-                id="role"
-                type="text"
-                value={role}
-                onChange={(e) => setRole(e.target.value)}
-                placeholder="e.g. Virtual Assistant"
-                className={inputCls}
-              />
+              <FieldFrame>
+                <input
+                  id="role"
+                  type="text"
+                  value={role}
+                  onChange={(e) => setRole(e.target.value)}
+                  placeholder="e.g. Virtual Assistant"
+                  className={fieldInputCls}
+                />
+              </FieldFrame>
             </Field>
 
             <Field id="skills" label="Your top skills" hint="comma-separated">
-              <input
-                id="skills"
-                type="text"
-                value={skills}
-                onChange={(e) => setSkills(e.target.value)}
-                placeholder="e.g. customer support, email, Zendesk"
-                className={inputCls}
-              />
+              <FieldFrame>
+                <input
+                  id="skills"
+                  type="text"
+                  value={skills}
+                  onChange={(e) => setSkills(e.target.value)}
+                  placeholder="e.g. customer support, email, Zendesk"
+                  className={fieldInputCls}
+                />
+              </FieldFrame>
             </Field>
 
             <Field id="experience" label="Your experience level">
-              <select
-                id="experience"
-                value={experience}
-                onChange={(e) => setExperience(e.target.value)}
-                className={inputCls}
-              >
-                <option value="">Choose one</option>
-                {EXPERIENCE.filter(Boolean).map((x) => (
-                  <option key={x} value={x}>
-                    {x}
-                  </option>
-                ))}
-              </select>
+              <FieldFrame>
+                <select
+                  id="experience"
+                  value={experience}
+                  onChange={(e) => setExperience(e.target.value)}
+                  className={fieldInputCls}
+                >
+                  <option value="">Choose one</option>
+                  {EXPERIENCE.filter(Boolean).map((x) => (
+                    <option key={x} value={x}>
+                      {x}
+                    </option>
+                  ))}
+                </select>
+              </FieldFrame>
             </Field>
 
             <Field id="hours" label="Hours per week">
-              <select
-                id="hours"
-                value={hours}
-                onChange={(e) => setHours(e.target.value)}
-                className={inputCls}
-              >
-                {HOURS.map((x) => (
-                  <option key={x} value={x}>
-                    {x}
-                  </option>
-                ))}
-              </select>
+              <FieldFrame>
+                <select
+                  id="hours"
+                  value={hours}
+                  onChange={(e) => setHours(e.target.value)}
+                  className={fieldInputCls}
+                >
+                  {HOURS.map((x) => (
+                    <option key={x} value={x}>
+                      {x}
+                    </option>
+                  ))}
+                </select>
+              </FieldFrame>
             </Field>
 
             <Field id="rate" label="Offered pay" hint="the number, if stated">
-              <input
-                id="rate"
-                type="number"
-                inputMode="numeric"
-                min="0"
-                value={rate}
-                onChange={(e) => setRate(e.target.value)}
-                placeholder="e.g. 45000"
-                className={inputCls}
-              />
+              <FieldFrame>
+                <input
+                  id="rate"
+                  type="number"
+                  inputMode="numeric"
+                  min="0"
+                  value={rate}
+                  onChange={(e) => setRate(e.target.value)}
+                  placeholder="e.g. 45000"
+                  className={fieldInputCls}
+                />
+              </FieldFrame>
             </Field>
 
             <Field id="rateType" label="Pay basis">
-              <select
-                id="rateType"
-                value={rateType}
-                onChange={(e) => setRateType(e.target.value)}
-                className={inputCls}
-              >
-                {RATE_TYPES.map((x) => (
-                  <option key={x} value={x}>
-                    {x}
-                  </option>
-                ))}
-              </select>
+              <FieldFrame>
+                <select
+                  id="rateType"
+                  value={rateType}
+                  onChange={(e) => setRateType(e.target.value)}
+                  className={fieldInputCls}
+                >
+                  {RATE_TYPES.map((x) => (
+                    <option key={x} value={x}>
+                      {x}
+                    </option>
+                  ))}
+                </select>
+              </FieldFrame>
             </Field>
           </div>
 

@@ -203,6 +203,121 @@ body {
   transform: translateY(-2px);
 }
 
+/* ── paste box: the "job-post slip" ─────────────────────────────────
+   The frame (not the textarea) is the visual + focus indicator, so it can
+   lift, glow, and draw its corner reticles without a doubled outline. */
+.paste-frame {
+  position: relative;
+  transition: box-shadow 0.3s ease, transform 0.25s ease, border-color 0.25s ease;
+}
+.paste-frame:hover:not(:focus-within) {
+  border-color: var(--color-ink-faint);
+  box-shadow: 0 10px 26px -22px rgb(27 26 23 / 0.4);
+}
+.paste-frame:focus-within {
+  transform: translateY(-2px);
+  border-color: var(--color-brand);
+  box-shadow:
+    0 0 0 4px rgb(11 110 95 / 0.14),
+    0 20px 44px -28px rgb(11 110 95 / 0.55);
+}
+/* the textarea defers its focus ring to the frame */
+.paste-area:focus,
+.paste-area:focus-visible {
+  outline: none;
+  box-shadow: none;
+}
+
+/* top accent line grows from the centre on focus */
+.paste-accent {
+  position: absolute;
+  top: -1px;
+  left: 16px;
+  right: 16px;
+  height: 2px;
+  border-radius: 2px;
+  background: linear-gradient(90deg, transparent, var(--color-brand), transparent);
+  transform: scaleX(0);
+  transition: transform 0.4s cubic-bezier(0.2, 0.7, 0.2, 1);
+  pointer-events: none;
+}
+.paste-frame:focus-within .paste-accent { transform: scaleX(1); }
+
+/* corner reticle brackets — the "inspection desk" framing */
+.paste-corner {
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  border: 0 solid var(--color-brand);
+  opacity: 0;
+  transition: opacity 0.3s ease, transform 0.3s ease;
+  pointer-events: none;
+}
+.paste-frame:focus-within .paste-corner { opacity: 0.85; }
+.paste-corner.tl { top: 7px; left: 7px; border-top-width: 2px; border-left-width: 2px; border-top-left-radius: 6px; transform: translate(4px, 4px); }
+.paste-corner.tr { top: 7px; right: 7px; border-top-width: 2px; border-right-width: 2px; border-top-right-radius: 6px; transform: translate(-4px, 4px); }
+.paste-corner.bl { bottom: 7px; left: 7px; border-bottom-width: 2px; border-left-width: 2px; border-bottom-left-radius: 6px; transform: translate(4px, -4px); }
+.paste-corner.br { bottom: 7px; right: 7px; border-bottom-width: 2px; border-right-width: 2px; border-bottom-right-radius: 6px; transform: translate(-4px, -4px); }
+.paste-frame:focus-within .paste-corner.tl,
+.paste-frame:focus-within .paste-corner.tr,
+.paste-frame:focus-within .paste-corner.bl,
+.paste-frame:focus-within .paste-corner.br { transform: translate(0, 0); }
+
+/* idle "ready" light — slow, small, stops once there's text */
+@keyframes ag-ready {
+  0%, 100% { opacity: 1; transform: scale(1); box-shadow: 0 0 0 0 rgb(11 110 95 / 0.4); }
+  50% { opacity: 0.55; transform: scale(0.78); box-shadow: 0 0 0 5px rgb(11 110 95 / 0); }
+}
+.dot-ready { animation: ag-ready 1.9s ease-in-out infinite; }
+
+/* one gentle shake when scan is attempted with an empty box (no fill, so it
+   doesn't fight the focus-within lift afterwards) */
+@keyframes ag-shake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-5px); }
+  40% { transform: translateX(5px); }
+  60% { transform: translateX(-3px); }
+  80% { transform: translateX(3px); }
+}
+.paste-shake { animation: ag-shake 0.4s ease; }
+
+/* ── field frame: lighter sibling of the paste slip for single-line
+   inputs and selects. Lift + glow + a growing underline accent. ───── */
+.field-frame {
+  position: relative;
+  transition: box-shadow 0.22s ease, transform 0.22s ease, border-color 0.22s ease;
+}
+.field-frame:hover:not(:focus-within) {
+  border-color: var(--color-ink-faint);
+}
+.field-frame:focus-within {
+  transform: translateY(-1px);
+  border-color: var(--color-brand);
+  box-shadow:
+    0 0 0 3px rgb(11 110 95 / 0.13),
+    0 14px 30px -26px rgb(11 110 95 / 0.5);
+}
+/* the control defers its focus ring to the frame */
+.field-input:focus,
+.field-input:focus-visible {
+  outline: none;
+  box-shadow: none;
+}
+/* underline accent grows from the centre on focus */
+.field-accent {
+  position: absolute;
+  bottom: -1px;
+  left: 12px;
+  right: 12px;
+  height: 2px;
+  border-radius: 2px;
+  background: linear-gradient(90deg, transparent, var(--color-brand), transparent);
+  transform: scaleX(0);
+  transition: transform 0.32s cubic-bezier(0.2, 0.7, 0.2, 1);
+  pointer-events: none;
+}
+.field-frame:focus-within .field-accent { transform: scaleX(1); }
+
 /* reduced motion: appear instantly, no delays, no looping */
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
