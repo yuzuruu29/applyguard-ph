@@ -88,7 +88,7 @@ export default function Settings() {
       </div>
 
       {/* Preferences */}
-      <section className="space-y-5 rounded-3xl border border-line bg-card p-6 sm:p-8">
+      <section className="elev space-y-5 rounded-3xl border border-line bg-card p-6 sm:p-8">
         <h2 className="font-display text-xl text-ink">Your preferences</h2>
 
         <div>
@@ -143,7 +143,7 @@ export default function Settings() {
       </section>
 
       {/* Data safety */}
-      <section className="space-y-5 rounded-3xl border border-line bg-card p-6 sm:p-8">
+      <section className="elev space-y-5 rounded-3xl border border-line bg-card p-6 sm:p-8">
         <div>
           <h2 className="font-display text-xl text-ink">Your data</h2>
           <p className="mt-1 text-sm text-ink-soft">

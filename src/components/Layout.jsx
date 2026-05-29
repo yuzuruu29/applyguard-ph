@@ -1,4 +1,4 @@
-import { NavLink, Link, Outlet } from "react-router-dom";
+import { NavLink, Link, Outlet, useLocation } from "react-router-dom";
 import Toast from "./Toast.jsx";
 
 const NAV = [
@@ -28,6 +28,7 @@ function ShieldMark() {
 }
 
 export default function Layout() {
+  const location = useLocation();
   return (
     <div className="flex min-h-screen flex-col">
       <header className="sticky top-0 z-40 border-b border-line bg-paper/85 backdrop-blur">
@@ -64,7 +65,11 @@ export default function Layout() {
       </header>
 
       <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8 sm:py-12">
-        <Outlet />
+        {/* re-keyed per route so each page fades in; pure opacity so it never
+            fights the per-section rise transforms inside a page */}
+        <div key={location.pathname} className="page-enter">
+          <Outlet />
+        </div>
       </main>
 
       <footer className="border-t border-line bg-panel/60">

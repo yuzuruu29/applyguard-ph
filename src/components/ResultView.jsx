@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useApp } from "../store.jsx";
 import { VERDICT_TONE, RISK_TONE } from "../lib/tone.js";
@@ -5,7 +6,15 @@ import { VERDICT_TONE, RISK_TONE } from "../lib/tone.js";
 function ScoreRing({ score, toneClass }) {
   const r = 52;
   const c = 2 * Math.PI * r;
-  const offset = c * (1 - Math.max(0, Math.min(100, score)) / 100);
+  const target = c * (1 - Math.max(0, Math.min(100, score)) / 100);
+  // Start empty, then fill on mount. The number itself is rendered correctly
+  // from the first frame, so the value is never hidden behind the animation.
+  const [offset, setOffset] = useState(c);
+  useEffect(() => {
+    const id = requestAnimationFrame(() => setOffset(target));
+    return () => cancelAnimationFrame(id);
+  }, [target, c]);
+
   return (
     <div className="relative h-32 w-32 shrink-0">
       <svg viewBox="0 0 120 120" className="h-full w-full -rotate-90">
@@ -15,7 +24,7 @@ function ScoreRing({ score, toneClass }) {
           cy="60"
           r={r}
           fill="none"
-          className={toneClass}
+          className={`ring-fill ${toneClass}`}
           stroke="currentColor"
           strokeWidth="10"
           strokeLinecap="round"
@@ -48,7 +57,7 @@ function BreakdownBar({ label, value, max }) {
   );
 }
 
-function FlagRow({ flag, tone }) {
+function FlagRow({ flag, tone, index = 0 }) {
   const styles =
     tone === "hard"
       ? "border-stop/30 bg-stop-soft"
@@ -56,7 +65,10 @@ function FlagRow({ flag, tone }) {
   const dot = tone === "hard" ? "bg-stop" : "bg-warn";
   const labelColor = tone === "hard" ? "text-stop-ink" : "text-warn-ink";
   return (
-    <li className={`rounded-2xl border ${styles} p-4`}>
+    <li
+      className={`rise rounded-2xl border ${styles} p-4`}
+      style={{ animationDelay: `${0.06 * index}s` }}
+    >
       <div className="flex items-start gap-3">
         <span className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${dot}`} aria-hidden="true" />
         <div>
@@ -91,6 +103,8 @@ export default function ResultView() {
   const navigate = useNavigate();
   const { result, getJob, saveJob, notify } = useApp();
 
+  const [copied, setCopied] = useState(false);
+
   const isPreview = id === "preview";
   const data = isPreview ? result : getJob(id);
 
@@ -121,10 +135,16 @@ export default function ResultView() {
     navigate(`/result/${newId}`);
   };
 
+  const markCopied = () => {
+    notify("Prompt copied. Paste it into your AI.", "success");
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1900);
+  };
+
   const copyPrompt = async () => {
     try {
       await navigator.clipboard.writeText(data.prompt);
-      notify("Prompt copied. Paste it into your AI.", "success");
+      markCopied();
     } catch {
       const ta = document.createElement("textarea");
       ta.value = data.prompt;
@@ -132,7 +152,7 @@ export default function ResultView() {
       ta.select();
       try {
         document.execCommand("copy");
-        notify("Prompt copied. Paste it into your AI.", "success");
+        markCopied();
       } catch {
         notify("Couldn't copy automatically. Select the text and copy it.", "error");
       }
@@ -154,19 +174,19 @@ export default function ResultView() {
       </div>
 
       {/* ── Verdict + score ──────────────────────────────────────── */}
-      <section className="rise rounded-3xl border border-line bg-card p-6 sm:p-8">
+      <section className="rise elev rounded-3xl border border-line bg-card p-6 sm:p-8">
         <p className="eyebrow">{data.title}</p>
         <div className="mt-4 flex flex-col items-start gap-6 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-5">
             <div
-              className={`stamp ${verdict.stampText} ${verdict.stampBorder} px-5 py-3 text-3xl font-semibold uppercase`}
+              className={`stamp stamp-in ${verdict.stampText} ${verdict.stampBorder} px-5 py-3 text-3xl font-semibold uppercase`}
             >
               {verdict.label}
             </div>
             <div>
-              <p className="max-w-xs text-ink-soft">{verdict.sub}</p>
+              <p className="settle d2 max-w-xs text-ink-soft">{verdict.sub}</p>
               <span
-                className={`mt-2 inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-sm font-semibold ${risk.chip}`}
+                className={`settle d3 mt-2 inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-sm font-semibold ${risk.chip}`}
               >
                 <span className="h-1.5 w-1.5 rounded-full bg-current" aria-hidden="true" />
                 {risk.label}
@@ -178,7 +198,7 @@ export default function ResultView() {
       </section>
 
       {/* ── Score breakdown ──────────────────────────────────────── */}
-      <section className="rounded-3xl border border-line bg-card p-6 sm:p-8">
+      <section className="rise d2 elev rounded-3xl border border-line bg-card p-6 sm:p-8">
         <h2 className="font-display text-xl text-ink">Why this score</h2>
         <p className="mt-1 text-sm text-ink-soft">
           Fit is built from four parts that add up to 100.
@@ -211,7 +231,7 @@ export default function ResultView() {
       </section>
 
       {/* ── Flags ────────────────────────────────────────────────── */}
-      <section className="rounded-3xl border border-line bg-card p-6 sm:p-8">
+      <section className="rise d3 elev rounded-3xl border border-line bg-card p-6 sm:p-8">
         <h2 className="font-display text-xl text-ink">Scam signals</h2>
         {cleanFlags ? (
           <div className="mt-4 rounded-2xl border border-go/30 bg-go-soft p-5">
@@ -227,8 +247,8 @@ export default function ResultView() {
               <div>
                 <p className="eyebrow mb-2 text-stop-ink">Hard stops</p>
                 <ul className="space-y-3">
-                  {hard.map((f) => (
-                    <FlagRow key={f.id} flag={f} tone="hard" />
+                  {hard.map((f, i) => (
+                    <FlagRow key={f.id} flag={f} tone="hard" index={i} />
                   ))}
                 </ul>
               </div>
@@ -237,8 +257,8 @@ export default function ResultView() {
               <div>
                 <p className="eyebrow mb-2 text-warn-ink">Worth a closer look</p>
                 <ul className="space-y-3">
-                  {soft.map((f) => (
-                    <FlagRow key={f.id} flag={f} tone="soft" />
+                  {soft.map((f, i) => (
+                    <FlagRow key={f.id} flag={f} tone="soft" index={i} />
                   ))}
                 </ul>
               </div>
@@ -248,8 +268,8 @@ export default function ResultView() {
       </section>
 
       {/* ── Missing info + next action ───────────────────────────── */}
-      <div className="grid grid-cols-1 gap-7 lg:grid-cols-2">
-        <section className="rounded-3xl border border-line bg-card p-6 sm:p-8">
+      <div className="rise d4 grid grid-cols-1 gap-7 lg:grid-cols-2">
+        <section className="elev rounded-3xl border border-line bg-card p-6 sm:p-8">
           <h2 className="font-display text-xl text-ink">Before you commit</h2>
           {missing.length > 0 ? (
             <>
@@ -273,7 +293,7 @@ export default function ResultView() {
           )}
         </section>
 
-        <section className="flex flex-col rounded-3xl border border-line bg-card p-6 sm:p-8">
+        <section className="elev flex flex-col rounded-3xl border border-line bg-card p-6 sm:p-8">
           <h2 className="font-display text-xl text-ink">What to do next</h2>
           <div className="mt-4 flex items-start gap-3 rounded-2xl bg-panel p-5">
             <span className={`mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full ${verdict.dot}`} aria-hidden="true" />
@@ -283,7 +303,7 @@ export default function ResultView() {
       </div>
 
       {/* ── Message generator ────────────────────────────────────── */}
-      <section className="rounded-3xl border border-line bg-card p-6 sm:p-8">
+      <section className="rise d5 elev rounded-3xl border border-line bg-card p-6 sm:p-8">
         <h2 className="font-display text-xl text-ink">
           {data.usesClarification ? "Ask these questions first" : "Your application message prompt"}
         </h2>
@@ -301,20 +321,24 @@ export default function ResultView() {
         <button
           type="button"
           onClick={copyPrompt}
-          className="mt-3 rounded-full bg-ink px-5 py-2.5 font-semibold text-paper transition-colors hover:bg-ink-soft focus-visible:outline-none"
+          className={`mt-3 inline-flex items-center gap-2 rounded-full px-5 py-2.5 font-semibold text-paper transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.99] focus-visible:outline-none ${
+            copied ? "bg-go" : "bg-ink hover:bg-ink-soft"
+          }`}
+          aria-live="polite"
         >
-          Copy prompt
+          <span aria-hidden="true">{copied ? "✓" : "⧉"}</span>
+          {copied ? "Copied" : "Copy prompt"}
         </button>
       </section>
 
       {/* ── Save ─────────────────────────────────────────────────── */}
       {isPreview && (
-        <section className="flex flex-col items-center gap-3 rounded-3xl border border-dashed border-line bg-card/60 p-6 text-center">
+        <section className="rise d6 flex flex-col items-center gap-3 rounded-3xl border border-dashed border-line bg-card/60 p-6 text-center">
           <p className="text-ink-soft">Want to track this one and follow up later?</p>
           <button
             type="button"
             onClick={handleSave}
-            className="rounded-full border border-brand bg-card px-6 py-3 font-semibold text-brand transition-colors hover:bg-brand hover:text-paper focus-visible:outline-none"
+            className="rounded-full border border-brand bg-card px-6 py-3 font-semibold text-brand transition-all duration-200 hover:-translate-y-0.5 hover:bg-brand hover:text-paper active:translate-y-0 active:scale-[0.99] focus-visible:outline-none"
           >
             Save to tracker
           </button>
@@ -322,7 +346,7 @@ export default function ResultView() {
       )}
 
       {/* ── POST-RESULT optional extras CTA (only here, only after a result) ── */}
-      <section className="rounded-3xl border border-brand/40 bg-brand/5 p-6 sm:p-8">
+      <section className="rise d6 rounded-3xl border border-brand/40 bg-brand/5 p-6 sm:p-8">
         <p className="eyebrow text-brand-deep">Optional extras</p>
         <h2 className="mt-2 font-display text-2xl text-ink">
           Want more help after the scan?
@@ -333,7 +357,7 @@ export default function ResultView() {
         </p>
         <Link
           to="/offers"
-          className="mt-5 inline-block rounded-full bg-brand px-6 py-3 font-semibold text-paper hover:bg-brand-deep"
+          className="mt-5 inline-block rounded-full bg-brand px-6 py-3 font-semibold text-paper transition-all duration-200 hover:-translate-y-0.5 hover:bg-brand-deep active:translate-y-0 active:scale-[0.99]"
         >
           See optional extras
         </Link>

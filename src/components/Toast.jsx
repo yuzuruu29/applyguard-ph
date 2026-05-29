@@ -21,7 +21,7 @@ export default function Toast() {
         <button
           key={t.id}
           onClick={() => dismissToast(t.id)}
-          className={`rise pointer-events-auto flex max-w-sm items-center gap-2 rounded-full px-4 py-2.5 text-sm font-medium shadow-lg shadow-ink/15 ${
+          className={`toast-in pointer-events-auto flex max-w-sm items-center gap-2 rounded-full px-4 py-2.5 text-sm font-medium shadow-lg shadow-ink/15 ${
             TONE[t.tone] || TONE.info
           }`}
         >

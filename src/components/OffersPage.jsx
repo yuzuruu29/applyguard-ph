@@ -57,10 +57,11 @@ export default function OffersPage() {
       </header>
 
       <div className="grid grid-cols-1 gap-5 md:grid-cols-3">
-        {OFFERS.map((offer) => (
+        {OFFERS.map((offer, i) => (
           <div
             key={offer.id}
-            className={`flex flex-col rounded-3xl border bg-card p-6 ${
+            style={{ animationDelay: `${0.07 * i}s` }}
+            className={`rise elev elev-hover flex flex-col rounded-3xl border bg-card p-6 ${
               offer.featured ? "border-brand shadow-sm shadow-brand/10" : "border-line"
             }`}
           >

@@ -94,22 +94,125 @@ body {
   padding: 0 0.05em;
 }
 
+/* ── motion: entrance, stamp, ring, scan sweep, page transition ──────
+   All decorative. Every animated element shows its final state on its own;
+   nothing essential is hidden behind motion. The reduced-motion block at the
+   bottom neutralises duration AND delay so everything appears at once. */
+
+/* staggered reveal */
+@keyframes ag-rise {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.rise {
+  animation: ag-rise 0.5s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+/* small settle for pills / secondary bits */
+@keyframes ag-settle {
+  from { opacity: 0; transform: translateY(4px) scale(0.96); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+.settle {
+  animation: ag-settle 0.45s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+/* the verdict stamp being pressed onto the page */
+@keyframes ag-stamp {
+  0% { opacity: 0; transform: rotate(-3deg) scale(1.7); }
+  55% { opacity: 1; transform: rotate(-3deg) scale(0.92); }
+  75% { transform: rotate(-3deg) scale(1.04); }
+  100% { opacity: 1; transform: rotate(-3deg) scale(1); }
+}
+.stamp-in {
+  animation: ag-stamp 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  animation-delay: 0.12s;
+}
+
+/* toast pops up from the bottom */
+@keyframes ag-toast-in {
+  from { opacity: 0; transform: translateY(12px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+.toast-in {
+  animation: ag-toast-in 0.32s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+/* calm "inspecting" sweep used on the scan button while checking */
+@keyframes ag-sweep {
+  from { transform: translateX(-120%); }
+  to { transform: translateX(120%); }
+}
+.scan-sweep::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    100deg,
+    transparent 20%,
+    rgb(255 255 255 / 0.28) 50%,
+    transparent 80%
+  );
+  animation: ag-sweep 1.1s ease-in-out infinite;
+}
+
+/* gentle pulse for the inspection dot */
+@keyframes ag-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.45; transform: scale(0.82); }
+}
+.pulse-dot {
+  animation: ag-pulse 1s ease-in-out infinite;
+}
+
+/* lightweight per-route fade for the main area */
+@keyframes ag-page {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.page-enter {
+  animation: ag-page 0.3s ease-out both;
+}
+
+/* score-ring stroke fills via transition (set in the component) */
+.ring-fill {
+  transition: stroke-dashoffset 0.95s cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+
+/* staggered delays for entrance groups (kept short on purpose) */
+.d1 { animation-delay: 0.05s; }
+.d2 { animation-delay: 0.11s; }
+.d3 { animation-delay: 0.17s; }
+.d4 { animation-delay: 0.23s; }
+.d5 { animation-delay: 0.29s; }
+.d6 { animation-delay: 0.35s; }
+
+/* soft elevation for cards — a thin top highlight plus a low, wide shadow */
+.elev {
+  box-shadow:
+    0 1px 2px rgb(27 26 23 / 0.04),
+    0 14px 34px -24px rgb(27 26 23 / 0.35);
+}
+.elev-hover {
+  transition: box-shadow 0.25s ease, transform 0.25s ease;
+}
+.elev-hover:hover {
+  box-shadow:
+    0 1px 2px rgb(27 26 23 / 0.05),
+    0 18px 40px -22px rgb(27 26 23 / 0.4);
+  transform: translateY(-2px);
+}
+
+/* reduced motion: appear instantly, no delays, no looping */
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
   *,
   *::before,
   *::after {
     animation-duration: 0.001ms !important;
+    animation-delay: 0ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
   }
-}
-
-/* staggered page-load reveal (respects reduced-motion above) */
-@keyframes ag-rise {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-.rise {
-  animation: ag-rise 0.5s cubic-bezier(0.2, 0.7, 0.2, 1) both;
 }

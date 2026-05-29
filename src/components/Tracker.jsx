@@ -10,12 +10,15 @@ function fmtDate(iso) {
   return d.toLocaleDateString("en-PH", { month: "short", day: "numeric", year: "numeric" });
 }
 
-function JobCard({ job, onStatus, onFollowUp, onNotes, onDelete }) {
+function JobCard({ job, onStatus, onFollowUp, onNotes, onDelete, index = 0 }) {
   const verdict = VERDICT_TONE[job.verdict] || VERDICT_TONE.Caution;
   const risk = RISK_TONE[job.riskLevel] || RISK_TONE.Medium;
 
   return (
-    <li className="rounded-3xl border border-line bg-card p-5 sm:p-6">
+    <li
+      className="rise elev elev-hover rounded-3xl border border-line bg-card p-5 sm:p-6"
+      style={{ animationDelay: `${0.05 * index}s` }}
+    >
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
           <Link
@@ -149,10 +152,11 @@ export default function Tracker() {
         </div>
       ) : (
         <ul className="space-y-5">
-          {jobs.map((job) => (
+          {jobs.map((job, i) => (
             <JobCard
               key={job.id}
               job={job}
+              index={i}
               onStatus={(id, status) => updateJob(id, { status })}
               onFollowUp={(id, followUpBy) => updateJob(id, { followUpBy })}
               onNotes={(id, notes) => updateJob(id, { notes })}

@@ -1,7 +1,12 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useApp } from "../store.jsx";
 import { analyzeJob, deriveTitle } from "../lib/analyze.js";
+
+const prefersReducedMotion = () =>
+  typeof window !== "undefined" &&
+  window.matchMedia &&
+  window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
 const EXPERIENCE = ["", "Entry-level", "Intermediate", "Senior"];
 const RATE_TYPES = ["Not stated", "Hourly", "Weekly", "Monthly", "Yearly", "Per project"];
@@ -35,8 +40,14 @@ export default function ScanForm() {
   const [rateType, setRateType] = useState("Not stated");
   const [hours, setHours] = useState("Not stated");
   const [error, setError] = useState("");
+  const [checking, setChecking] = useState(false);
+  const timerRef = useRef(null);
+
+  // Don't leave a pending navigation timer if the user leaves mid-check.
+  useEffect(() => () => clearTimeout(timerRef.current), []);
 
   const handleScan = () => {
+    if (checking) return;
     if (!rawText.trim()) {
       setError("Paste the job post first — there's nothing to check yet.");
       return;
@@ -50,9 +61,19 @@ export default function ScanForm() {
       rateType,
       hours,
     };
-    const result = analyzeJob({ rawText, intake, settings });
-    setResult({ ...result, title: deriveTitle(rawText, intake) });
-    navigate("/result/preview");
+    const run = () => {
+      const result = analyzeJob({ rawText, intake, settings });
+      setResult({ ...result, title: deriveTitle(rawText, intake) });
+      navigate("/result/preview");
+    };
+    // A short, calm "inspecting" beat before the verdict. Skipped entirely
+    // when the user prefers reduced motion, so it never blocks them.
+    if (prefersReducedMotion()) {
+      run();
+      return;
+    }
+    setChecking(true);
+    timerRef.current = setTimeout(run, 750);
   };
 
   const scrollToForm = () => {
@@ -63,36 +84,39 @@ export default function ScanForm() {
   return (
     <div className="space-y-10">
       {/* ── Hero ───────────────────────────────────────────────── */}
-      <section className="rise relative overflow-hidden rounded-3xl border border-line bg-card px-6 py-10 sm:px-10 sm:py-14">
+      <section className="elev relative overflow-hidden rounded-3xl border border-line bg-card px-6 py-10 sm:px-10 sm:py-14">
         <div className="pointer-events-none absolute -right-16 -top-16 h-64 w-64 rounded-full bg-brand/5" />
         <div className="pointer-events-none absolute -bottom-20 -left-10 h-56 w-56 rounded-full bg-marker/10" />
+        {/* faint registration ticks — the "inspection desk" detail */}
+        <div className="pointer-events-none absolute left-5 top-5 h-4 w-4 border-l-2 border-t-2 border-line" aria-hidden="true" />
+        <div className="pointer-events-none absolute right-5 top-5 h-4 w-4 border-r-2 border-t-2 border-line" aria-hidden="true" />
         <div className="relative max-w-2xl">
-          <p className="eyebrow">Free job-post check</p>
-          <h1 className="mt-3 font-display text-4xl leading-[1.05] tracking-tight text-ink sm:text-5xl">
+          <p className="eyebrow rise">Free job-post check</p>
+          <h1 className="rise d1 mt-3 font-display text-4xl leading-[1.05] tracking-tight text-ink sm:text-5xl">
             Is this remote job{" "}
             <span className="marker-underline">worth applying to</span>, or a trap?
           </h1>
-          <p className="mt-5 text-lg leading-relaxed text-ink-soft">
+          <p className="rise d2 mt-5 text-lg leading-relaxed text-ink-soft">
             Paste the post, add a few quick details, and get a straight answer: apply, slow
             down, or skip. You also see the scam signals and the questions you should ask.
           </p>
 
-          <p className="mt-6 font-medium text-ink">
+          <p className="rise d3 mt-6 font-medium text-ink">
             No sign-up. No subscription. Built for Filipino remote job seekers.
           </p>
 
-          <div className="mt-7 flex flex-wrap items-center gap-3">
+          <div className="rise d4 mt-7 flex flex-wrap items-center gap-3">
             <button
               type="button"
               onClick={scrollToForm}
-              className="rounded-full bg-brand px-6 py-3 text-base font-semibold text-paper shadow-sm transition-colors hover:bg-brand-deep focus-visible:outline-none"
+              className="rounded-full bg-brand px-6 py-3 text-base font-semibold text-paper shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:bg-brand-deep hover:shadow-md active:translate-y-0 active:scale-[0.99] focus-visible:outline-none"
             >
               Scan a job post — free
             </button>
             <span className="text-sm text-ink-faint">Takes about a minute.</span>
           </div>
 
-          <ul className="mt-8 flex flex-wrap gap-2 text-xs font-medium">
+          <ul className="rise d5 mt-8 flex flex-wrap gap-2 text-xs font-medium">
             <li className="rounded-full bg-go-soft px-3 py-1 text-go-ink">Apply — go for it</li>
             <li className="rounded-full bg-warn-soft px-3 py-1 text-warn-ink">Caution — check first</li>
             <li className="rounded-full bg-stop-soft px-3 py-1 text-stop-ink">Skip — not worth it</li>
@@ -107,7 +131,7 @@ export default function ScanForm() {
           <p className="eyebrow">Step 1 of 1</p>
         </div>
 
-        <div className="space-y-6 rounded-3xl border border-line bg-card p-5 sm:p-7">
+        <div className="elev space-y-6 rounded-3xl border border-line bg-card p-5 sm:p-7">
           <Field id="rawText" label="Paste the job post" hint="the whole thing — title, description, contact">
             <textarea
               id="rawText"
@@ -215,12 +239,27 @@ export default function ScanForm() {
           <button
             type="button"
             onClick={handleScan}
-            className="w-full rounded-2xl bg-brand px-6 py-4 text-lg font-semibold text-paper shadow-sm transition-colors hover:bg-brand-deep focus-visible:outline-none"
+            disabled={checking}
+            aria-busy={checking}
+            className={`relative w-full overflow-hidden rounded-2xl px-6 py-4 text-lg font-semibold text-paper shadow-sm transition-all duration-200 focus-visible:outline-none ${
+              checking
+                ? "scan-sweep cursor-progress bg-brand-deep"
+                : "bg-brand hover:-translate-y-0.5 hover:bg-brand-deep hover:shadow-md active:translate-y-0 active:scale-[0.99]"
+            }`}
           >
-            Check this job
+            {checking ? (
+              <span className="relative z-10 inline-flex items-center justify-center gap-2.5">
+                <span className="pulse-dot h-2.5 w-2.5 rounded-full bg-paper" aria-hidden="true" />
+                Checking this post…
+              </span>
+            ) : (
+              "Check this job"
+            )}
           </button>
-          <p className="text-center text-xs text-ink-faint">
-            Nothing is uploaded. The check runs in your browser.
+          <p className="text-center text-xs text-ink-faint" aria-live="polite">
+            {checking
+              ? "Checking this post for scam signals and fit."
+              : "Nothing is uploaded. The check runs in your browser."}
           </p>
         </div>
       </section>
