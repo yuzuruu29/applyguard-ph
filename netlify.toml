@@ -1,0 +1,14 @@
+# Netlify config for ApplyGuard PH (static SPA, no backend).
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+[build.environment]
+  NODE_VERSION = "20"
+
+# Single-page app: send every path to index.html so client-side routes like
+# /result/:id, /tracker, /settings, /offers work on refresh and direct load.
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200

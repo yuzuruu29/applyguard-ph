@@ -1,0 +1,114 @@
+@import "tailwindcss";
+
+/* ─────────────────────────────────────────────────────────────
+   ApplyGuard PH — design tokens
+   Aesthetic: a warm "field guide" for remote work. Paper + ink,
+   one deep-teal brand accent kept clear of the go/warn/stop trio
+   so risk signals never read as branding.
+   ───────────────────────────────────────────────────────────── */
+@theme {
+  --font-display: "Fraunces", ui-serif, Georgia, serif;
+  --font-sans: "Hanken Grotesk", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", monospace;
+
+  /* surfaces */
+  --color-paper: #f4efe4;
+  --color-card: #fffdf7;
+  --color-panel: #efe7d6;
+  --color-line: #ddd3bf;
+
+  /* ink */
+  --color-ink: #1b1a17;
+  --color-ink-soft: #4a4842;
+  --color-ink-faint: #7c786d;
+
+  /* brand */
+  --color-brand: #0b6e5f;
+  --color-brand-deep: #084d42;
+  --color-marker: #f2c14e;
+
+  /* go / warn / stop — verdict + risk signal trio */
+  --color-go: #1f7a43;
+  --color-go-soft: #e3f1e6;
+  --color-go-ink: #155d33;
+
+  --color-warn: #b4690e;
+  --color-warn-soft: #fae9c9;
+  --color-warn-ink: #8a4d05;
+
+  --color-stop: #c0392b;
+  --color-stop-soft: #f8e0db;
+  --color-stop-ink: #8a261b;
+}
+
+/* ── base ───────────────────────────────────────────────────── */
+html {
+  -webkit-text-size-adjust: 100%;
+  scroll-behavior: smooth;
+}
+
+body {
+  background-color: var(--color-paper);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  /* faint paper grain so large areas never read as flat fill */
+  background-image:
+    radial-gradient(circle at 1px 1px, rgba(27, 26, 23, 0.035) 1px, transparent 0);
+  background-size: 22px 22px;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* visible, on-brand focus ring for keyboard users */
+:focus-visible {
+  outline: 2px solid var(--color-brand);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* ── small reusable bits the utility classes can't express cleanly ── */
+
+/* section eyebrow: 01 — SCAN */
+.eyebrow {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--color-ink-faint);
+}
+
+/* the verdict "inspection stamp" */
+.stamp {
+  font-family: var(--font-display);
+  letter-spacing: 0.04em;
+  border: 3px double currentColor;
+  border-radius: 10px;
+  transform: rotate(-3deg);
+}
+
+/* hand-drawn marker underline used under the hero word */
+.marker-underline {
+  background-image: linear-gradient(transparent 62%, var(--color-marker) 62%);
+  background-repeat: no-repeat;
+  padding: 0 0.05em;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+
+/* staggered page-load reveal (respects reduced-motion above) */
+@keyframes ag-rise {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.rise {
+  animation: ag-rise 0.5s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
