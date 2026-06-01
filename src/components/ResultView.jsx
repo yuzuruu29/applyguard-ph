@@ -43,14 +43,14 @@ function ScoreRing({ score, toneClass }) {
 function BreakdownBar({ label, value, max }) {
   const pct = max ? Math.round((value / max) * 100) : 0;
   return (
-    <div>
-      <div className="mb-1 flex items-baseline justify-between text-sm">
-        <span className="text-ink-soft">{label}</span>
-        <span className="font-mono text-xs text-ink-faint">
-          {value}/{max}
+    <div className="rounded-xl border border-line bg-panel/30 p-3">
+      <div className="mb-2 flex items-baseline justify-between text-sm">
+        <span className="font-medium text-ink">{label}</span>
+        <span className="font-mono text-xs font-semibold text-brand">
+          {value} <span className="font-normal text-ink-faint">/ {max}</span>
         </span>
       </div>
-      <div className="h-2 w-full overflow-hidden rounded-full bg-panel">
+      <div className="h-2.5 w-full overflow-hidden rounded-full bg-panel">
         <div className="h-full rounded-full bg-brand" style={{ width: `${pct}%` }} />
       </div>
     </div>
@@ -276,10 +276,10 @@ export default function ResultView() {
               <p className="mt-1 text-sm text-ink-soft">
                 The post leaves these open. Get them answered first.
               </p>
-              <ul className="mt-4 space-y-2.5">
+              <ul className="mt-4 space-y-3">
                 {missing.map((m) => (
-                  <li key={m} className="flex items-start gap-2.5 text-ink">
-                    <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-warn" aria-hidden="true" />
+                  <li key={m} className="flex items-start gap-3 rounded-xl bg-warn-soft/50 p-3 text-sm text-ink border border-warn/10">
+                    <span className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-warn text-[10px] font-bold text-warn-ink" aria-hidden="true">!</span>
                     <span>{m}</span>
                   </li>
                 ))}
@@ -311,24 +311,30 @@ export default function ResultView() {
           Copy this and paste it into ChatGPT, Claude, or Gemini. ApplyGuard writes the
           prompt, not the message. You run it in your own AI account, so it stays free.
         </p>
-        <textarea
-          readOnly
-          value={data.prompt}
-          rows={10}
-          aria-label="Generated prompt to copy"
-          className="mt-4 w-full resize-y rounded-2xl border border-line bg-paper p-4 font-mono text-sm leading-relaxed text-ink focus:border-brand focus:outline-none"
-        />
-        <button
-          type="button"
-          onClick={copyPrompt}
-          className={`mt-3 inline-flex items-center gap-2 rounded-full px-5 py-2.5 font-semibold text-paper transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.99] focus-visible:outline-none ${
-            copied ? "bg-go" : "bg-ink hover:bg-ink-soft"
-          }`}
-          aria-live="polite"
-        >
-          <span aria-hidden="true">{copied ? "✓" : "⧉"}</span>
-          {copied ? "Copied" : "Copy prompt"}
-        </button>
+        <div className="relative mt-4">
+          <textarea
+            readOnly
+            value={data.prompt}
+            rows={10}
+            aria-label="Generated prompt to copy"
+            className="w-full resize-y rounded-2xl border border-line bg-paper p-4 pb-14 font-mono text-sm leading-relaxed text-ink focus:border-brand focus:outline-none"
+          />
+          <div className="absolute bottom-3 right-3">
+            <button
+              type="button"
+              onClick={copyPrompt}
+              className={`inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold text-paper shadow-sm transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.99] focus-visible:outline-none ${
+                copied ? "bg-go ring-2 ring-go ring-offset-2 ring-offset-card" : "bg-ink hover:bg-ink-soft"
+              }`}
+              aria-live="polite"
+            >
+              <span aria-hidden="true" className={copied ? "scale-110 transition-transform" : ""}>
+                {copied ? "✓" : "⧉"}
+              </span>
+              {copied ? "Copied!" : "Copy prompt"}
+            </button>
+          </div>
+        </div>
       </section>
 
       {/* ── Save ─────────────────────────────────────────────────── */}

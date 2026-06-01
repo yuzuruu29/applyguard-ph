@@ -83,6 +83,14 @@ const HARD_RULES = [
         t
       ),
   },
+  {
+    id: "remote-access",
+    label: "Requires remote access software upfront",
+    why: "Scammers often use tools like AnyDesk or TeamViewer to access your device and steal information.",
+    test: (t) =>
+      /\b(anydesk|teamviewer|logmein|splashtop)\b/.test(t) ||
+      /\bdownload\b[^.]{0,25}\b(remote control|remote desktop)\b/.test(t),
+  },
 ];
 
 /**
@@ -159,6 +167,24 @@ const SOFT_RULES = [
       const capsWords = (raw.match(/\b[A-Z]{4,}\b/g) || []).length;
       return exclaims >= 4 || capsWords >= 6;
     },
+  },
+  {
+    id: "mlm-phrasing",
+    label: "Uses MLM or pyramid scheme phrasing",
+    why: "Phrases like 'be your own boss' or mentions of recruitment and downlines often indicate an MLM scheme.",
+    test: (t) =>
+      /\b(be your own boss|financial freedom)\b/.test(t) ||
+      /\b(downline|upline|multi-level marketing|mlm|pyramid)\b/.test(t) ||
+      /\brecruit\b[^.]{0,15}\b(friends|family|others)\b/.test(t),
+  },
+  {
+    id: "unpaid-trial",
+    label: "Requires an unpaid trial or sample work",
+    why: "Asking for significant unpaid work upfront is a common way to get free labor.",
+    test: (t) =>
+      /\b(unpaid|free)\b[^.]{0,15}\b(trial|test|sample)\b/.test(t) ||
+      /\bwork for free\b/.test(t) ||
+      /\btrial period\b[^.]{0,15}\bwithout pay\b/.test(t),
   },
 ];
 
