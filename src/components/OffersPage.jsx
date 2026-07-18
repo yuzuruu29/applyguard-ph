@@ -102,54 +102,78 @@ export default function OffersPage() {
       </header>
 
       {/* Premium Sample Section */}
-      <section className="elev space-y-6 rounded-3xl border border-line bg-card p-6 sm:p-8">
-        <h2 className="font-display text-2xl text-ink">How Premium Works</h2>
-        <p className="text-ink-soft">
-          When you subscribe to Premium, you get instant access to our AI features directly on the result page. Here is a brief sample of what you can expect:
-        </p>
+      <section className="elev space-y-8 rounded-3xl border border-line bg-card p-6 sm:p-8">
+        <div>
+          <h2 className="font-display text-2xl text-ink">What exactly do I get?</h2>
+          <p className="mt-2 text-ink-soft">
+            Premium activates a powerful AI assistant right on your scan results page. It reads the job post for you and gives you four major advantages:
+          </p>
+        </div>
         
         <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-          <div className="rounded-2xl border border-brand/30 bg-brand/5 p-5">
-            <div className="mb-3 flex items-center gap-2">
-              <span className="text-xl" aria-hidden="true">✍️</span>
-              <h3 className="font-semibold text-ink">AI message generator</h3>
+          {/* AI Message Generator */}
+          <div className="flex flex-col gap-3">
+            <div className="flex items-center gap-2">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-brand/10 text-xl" aria-hidden="true">✍️</div>
+              <h3 className="font-display text-lg text-ink">AI Message Generator</h3>
             </div>
-            <div className="rounded-xl bg-paper p-4 text-sm text-ink-soft shadow-sm border border-line">
-              <p className="italic">"Hi [Hiring Manager], I noticed your job post for a Frontend Developer..."</p>
+            <p className="text-sm text-ink-soft">
+              Skip the blank page anxiety. We analyze the job post and generate a custom, professional message you can send directly to the hiring manager.
+            </p>
+            <div className="mt-auto rounded-xl border border-line bg-paper p-4 shadow-sm relative">
+              <div className="absolute -top-3 right-4 rounded bg-paper px-2 text-xs font-semibold text-brand border border-line">Example</div>
+              <p className="text-sm italic text-ink-soft">"Hi team, I noticed your opening for a Frontend Developer. My experience with React aligns perfectly with your requirements..."</p>
               <div className="mt-3 flex gap-2">
-                <span className="rounded-full bg-brand/10 px-2 py-0.5 text-xs text-brand">Professional</span>
-                <span className="rounded-full bg-brand/10 px-2 py-0.5 text-xs text-brand">Direct</span>
+                <span className="rounded-full bg-brand/10 px-2 py-0.5 text-xs text-brand">Professional tone</span>
               </div>
             </div>
           </div>
 
-          <div className="rounded-2xl border border-stop/30 bg-stop/5 p-5">
-            <div className="mb-3 flex items-center gap-2">
-              <span className="text-xl" aria-hidden="true">🔍</span>
-              <h3 className="font-semibold text-ink">AI deep scam analysis</h3>
+          {/* AI Deep Scam Analysis */}
+          <div className="flex flex-col gap-3">
+            <div className="flex items-center gap-2">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-stop/10 text-xl" aria-hidden="true">🔍</div>
+              <h3 className="font-display text-lg text-ink">Deep Scam Analysis</h3>
             </div>
-            <div className="rounded-xl bg-paper p-4 text-sm text-ink-soft shadow-sm border border-line">
-              <p><strong>Warning:</strong> The requested "training fee" is a major red flag commonly associated with task scams.</p>
-            </div>
-          </div>
-
-          <div className="rounded-2xl border border-go/30 bg-go/5 p-5">
-            <div className="mb-3 flex items-center gap-2">
-              <span className="text-xl" aria-hidden="true">📄</span>
-              <h3 className="font-semibold text-ink">Resume tailoring</h3>
-            </div>
-            <div className="rounded-xl bg-paper p-4 text-sm text-ink-soft shadow-sm border border-line">
-              <p>Highlight your experience with <strong>React</strong> and <strong>Vite</strong> to better match the core requirements of this role.</p>
+            <p className="text-sm text-ink-soft">
+              Go beyond the basic checks. The AI reads between the lines to detect subtle manipulation, pyramid schemes, and hidden fees.
+            </p>
+            <div className="mt-auto rounded-xl border border-stop/30 bg-stop/5 p-4 relative">
+              <div className="absolute -top-3 right-4 rounded bg-paper px-2 text-xs font-semibold text-stop-ink border border-stop/30">Example</div>
+              <div className="flex items-start gap-2">
+                <span className="text-stop-ink mt-0.5">⚠️</span>
+                <p className="text-sm text-ink-soft"><strong>Red flag detected:</strong> The requirement to "pay for your own equipment upfront" is a very common task scam tactic.</p>
+              </div>
             </div>
           </div>
 
-          <div className="rounded-2xl border border-warn/30 bg-warn/5 p-5">
-            <div className="mb-3 flex items-center gap-2">
-              <span className="text-xl" aria-hidden="true">🎯</span>
-              <h3 className="font-semibold text-ink">Interview prep</h3>
+          {/* Resume Tailoring */}
+          <div className="flex flex-col gap-3">
+            <div className="flex items-center gap-2">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-go/10 text-xl" aria-hidden="true">📄</div>
+              <h3 className="font-display text-lg text-ink">Resume Tailoring</h3>
             </div>
-            <div className="rounded-xl bg-paper p-4 text-sm text-ink-soft shadow-sm border border-line">
-              <p><strong>Practice Question:</strong> "Can you describe a time you optimized a React application's performance?"</p>
+            <p className="text-sm text-ink-soft">
+              Beat the applicant tracking systems (ATS). We tell you exactly which skills and keywords from your background to emphasize for this specific role.
+            </p>
+            <div className="mt-auto rounded-xl border border-go/30 bg-go/5 p-4 relative">
+              <div className="absolute -top-3 right-4 rounded bg-paper px-2 text-xs font-semibold text-go-ink border border-go/30">Example</div>
+              <p className="text-sm text-ink-soft"><span className="font-semibold text-go-ink">✓ Add this keyword:</span> Ensure you mention <strong>Tailwind CSS</strong> in your recent projects, as it is listed as a core requirement.</p>
+            </div>
+          </div>
+
+          {/* Interview Prep */}
+          <div className="flex flex-col gap-3">
+            <div className="flex items-center gap-2">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-warn/10 text-xl" aria-hidden="true">🎯</div>
+              <h3 className="font-display text-lg text-ink">Custom Interview Prep</h3>
+            </div>
+            <p className="text-sm text-ink-soft">
+              Walk into your interview with confidence. Get realistic practice questions based directly on the duties listed in the job description.
+            </p>
+            <div className="mt-auto rounded-xl border border-warn/30 bg-warn/5 p-4 relative">
+              <div className="absolute -top-3 right-4 rounded bg-paper px-2 text-xs font-semibold text-warn-ink border border-warn/30">Example</div>
+              <p className="text-sm text-ink-soft"><span className="font-semibold text-warn-ink">Practice Question:</span> "Can you walk us through a time you had to optimize a React application's performance to handle large datasets?"</p>
             </div>
           </div>
         </div>
