@@ -1,11 +1,13 @@
 import { Routes, Route, Link } from "react-router-dom";
 import { AppProvider } from "./store.jsx";
+import { AuthProvider } from "./auth.jsx";
 import Layout from "./components/Layout.jsx";
 import ScanForm from "./components/ScanForm.jsx";
 import ResultView from "./components/ResultView.jsx";
 import Tracker from "./components/Tracker.jsx";
 import Settings from "./components/Settings.jsx";
 import OffersPage from "./components/OffersPage.jsx";
+import AccountPage from "./components/AccountPage.jsx";
 
 function NotFound() {
   return (
@@ -24,17 +26,20 @@ function NotFound() {
 
 export default function App() {
   return (
-    <AppProvider>
-      <Routes>
-        <Route element={<Layout />}>
-          <Route path="/" element={<ScanForm />} />
-          <Route path="/result/:id" element={<ResultView />} />
-          <Route path="/tracker" element={<Tracker />} />
-          <Route path="/settings" element={<Settings />} />
-          <Route path="/offers" element={<OffersPage />} />
-          <Route path="*" element={<NotFound />} />
-        </Route>
-      </Routes>
-    </AppProvider>
+    <AuthProvider>
+      <AppProvider>
+        <Routes>
+          <Route element={<Layout />}>
+            <Route path="/" element={<ScanForm />} />
+            <Route path="/result/:id" element={<ResultView />} />
+            <Route path="/tracker" element={<Tracker />} />
+            <Route path="/settings" element={<Settings />} />
+            <Route path="/offers" element={<OffersPage />} />
+            <Route path="/account" element={<AccountPage />} />
+            <Route path="*" element={<NotFound />} />
+          </Route>
+        </Routes>
+      </AppProvider>
+    </AuthProvider>
   );
 }

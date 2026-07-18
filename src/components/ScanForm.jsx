@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { useApp } from "../store.jsx";
 import { analyzeJob, deriveTitle } from "../lib/analyze.js";
+import { SAMPLES } from "../lib/samples.js";
+import { dueFollowUps, todayLocalISO } from "../lib/followups.js";
 
 const prefersReducedMotion = () =>
   typeof window !== "undefined" &&
@@ -11,6 +13,13 @@ const prefersReducedMotion = () =>
 const EXPERIENCE = ["", "Entry-level", "Intermediate", "Senior"];
 const RATE_TYPES = ["Not stated", "Hourly", "Weekly", "Monthly", "Yearly", "Per project"];
 const HOURS = ["Not stated", "Under 20", "20–40", "40+"];
+
+const CHECK_LINES = [
+  "Scanning for scam signals…",
+  "Checking role and pay fit…",
+  "Looking for missing details…",
+  "Calculating your score…",
+];
 
 const labelCls = "mb-1.5 block text-sm font-medium text-ink";
 const fieldInputCls =
@@ -41,7 +50,7 @@ function FieldFrame({ children }) {
 
 export default function ScanForm() {
   const navigate = useNavigate();
-  const { settings, setResult } = useApp();
+  const { settings, setResult, jobs } = useApp();
 
   const [rawText, setRawText] = useState("");
   const [role, setRole] = useState("");
@@ -52,10 +61,27 @@ export default function ScanForm() {
   const [hours, setHours] = useState("Not stated");
   const [error, setError] = useState("");
   const [checking, setChecking] = useState(false);
+  const [checkLine, setCheckLine] = useState(0);
   const timerRef = useRef(null);
 
   // Don't leave a pending navigation timer if the user leaves mid-check.
   useEffect(() => () => clearTimeout(timerRef.current), []);
+
+  // Cycle through inspection check lines while checking
+  useEffect(() => {
+    if (!checking) return;
+    setCheckLine(0);
+    const interval = setInterval(() => {
+      setCheckLine((prev) => {
+        if (prev >= CHECK_LINES.length - 1) {
+          clearInterval(interval);
+          return prev;
+        }
+        return prev + 1;
+      });
+    }, 180);
+    return () => clearInterval(interval);
+  }, [checking]);
 
   const handleScan = () => {
     if (checking) return;
@@ -97,12 +123,14 @@ export default function ScanForm() {
   const charCount = rawText.length;
   const wordCount = trimmed ? trimmed.split(/\s+/).length : 0;
 
+  const { overdue, today } = dueFollowUps(jobs);
+
   return (
     <div className="space-y-10">
       {/* ── Hero ───────────────────────────────────────────────── */}
       <section className="elev relative overflow-hidden rounded-3xl border border-line bg-card px-6 py-10 sm:px-10 sm:py-14">
-        <div className="pointer-events-none absolute -right-16 -top-16 h-64 w-64 rounded-full bg-brand/5" />
-        <div className="pointer-events-none absolute -bottom-20 -left-10 h-56 w-56 rounded-full bg-marker/10" />
+        <div className="pointer-events-none absolute right-0 top-0 h-64 w-64 rounded-full bg-brand/5" />
+        <div className="pointer-events-none absolute bottom-0 left-0 h-56 w-56 rounded-full bg-marker/10" />
         {/* faint registration ticks — the "inspection desk" detail */}
         <div className="pointer-events-none absolute left-5 top-5 h-4 w-4 border-l-2 border-t-2 border-line" aria-hidden="true" />
         <div className="pointer-events-none absolute right-5 top-5 h-4 w-4 border-r-2 border-t-2 border-line" aria-hidden="true" />
@@ -137,6 +165,33 @@ export default function ScanForm() {
             <li className="rounded-full bg-warn-soft px-3 py-1 text-warn-ink">Caution — check first</li>
             <li className="rounded-full bg-stop-soft px-3 py-1 text-stop-ink">Skip — not worth it</li>
           </ul>
+        </div>
+      </section>
+
+      {/* Sample posts — instant aha */}
+      <section className="space-y-3">
+        <p className="text-sm font-medium text-ink-soft">Try a sample post — see a verdict in seconds:</p>
+        <div className="flex flex-wrap gap-2.5">
+          {SAMPLES.map((s) => (
+            <button
+              key={s.key}
+              type="button"
+              onClick={() => {
+                setRawText(s.rawText);
+                setRole(s.intake.role);
+                setSkills(s.intake.skills);
+                setExperience(s.intake.experience);
+                setRate(s.intake.rate ? String(s.intake.rate) : "");
+                setRateType(s.intake.rateType);
+                setHours(s.intake.hours);
+                setError("");
+                document.getElementById("scan")?.scrollIntoView({ behavior: "smooth" });
+              }}
+              className="inline-flex min-h-11 items-center gap-2 rounded-full border border-line bg-card px-4 py-2 text-sm font-medium text-ink hover:border-brand hover:text-brand transition-colors focus-visible:outline-none"
+            >
+              {s.label}
+            </button>
+          ))}
         </div>
       </section>
 
@@ -199,6 +254,12 @@ export default function ScanForm() {
             )}
           </Field>
 
+          <details className="group">
+            <summary className="flex min-h-11 cursor-pointer items-center gap-2 text-sm font-medium text-ink-soft hover:text-ink list-none">
+              <span className="text-brand transition-transform duration-200 group-open:rotate-90" aria-hidden="true">▶</span>
+              Fine-tune your check (optional)
+            </summary>
+            <div className="mt-4">
           <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
             <Field id="role" label="Role you're after" hint="optional">
               <FieldFrame>
@@ -293,6 +354,8 @@ export default function ScanForm() {
               </FieldFrame>
             </Field>
           </div>
+            </div>
+          </details>
 
           <button
             type="button"
@@ -306,9 +369,14 @@ export default function ScanForm() {
             }`}
           >
             {checking ? (
-              <span className="relative z-10 inline-flex items-center justify-center gap-2.5">
-                <span className="pulse-dot h-2.5 w-2.5 rounded-full bg-paper" aria-hidden="true" />
-                Checking this post…
+              <span className="relative z-10 flex flex-col items-center gap-1.5">
+                <span className="flex items-center gap-2 text-sm">
+                  <span className="pulse-dot h-2.5 w-2.5 rounded-full bg-paper" aria-hidden="true" />
+                  {CHECK_LINES[checkLine]}
+                </span>
+                <span className="text-xs font-normal text-paper/70">
+                  {checkLine + 1} of {CHECK_LINES.length}
+                </span>
               </span>
             ) : (
               "Check this job"
@@ -316,11 +384,41 @@ export default function ScanForm() {
           </button>
           <p className="text-center text-xs text-ink-faint" aria-live="polite">
             {checking
-              ? "Checking this post for scam signals and fit."
+              ? "Inspecting — checks run in your browser only."
               : "Nothing is uploaded. The check runs in your browser."}
           </p>
         </div>
       </section>
+
+      {/* Follow-up nudge — only when there are overdue follow-ups */}
+      {jobs.length > 0 && (() => {
+        const due = overdue.length > 0 || today.length > 0;
+        if (!due) return null;
+        return (
+          <section className="rounded-3xl border border-warn/40 bg-warn-soft/60 p-5 sm:p-6">
+            <div className="flex flex-wrap items-start justify-between gap-4">
+              <div>
+                <p className="font-semibold text-warn-ink">
+                  {overdue.length > 0
+                    ? `${overdue.length} follow-up${overdue.length > 1 ? "s" : ""} overdue`
+                    : `${today.length} due today`}
+                </p>
+                <p className="mt-1 text-sm text-ink-soft">
+                  {overdue.length > 0
+                    ? "Check on these jobs in your tracker before they go cold."
+                    : "Don't let today's follow-ups slip."}
+                </p>
+              </div>
+              <Link
+                to="/tracker"
+                className="inline-flex min-h-11 items-center rounded-full bg-warn px-4 py-2 text-sm font-semibold text-paper hover:bg-warn-ink transition-colors"
+              >
+                Open tracker
+              </Link>
+            </div>
+          </section>
+        );
+      })()}
     </div>
   );
 }

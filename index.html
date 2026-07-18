@@ -2,12 +2,43 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no" />
     <meta
       name="description"
       content="ApplyGuard PH — a free, no-login tool that checks a remote job post for scam signals and fit before you apply. Built for Filipino remote job seekers."
     />
+
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="ApplyGuard PH — Check a remote job before you apply" />
+    <meta
+      property="og:description"
+      content="Paste a job post and get a straight answer: Apply, Caution, or Skip. Free. No sign-up. Built for Filipino remote workers."
+    />
+    <meta property="og:image" content="https://applyguard.ph/og-cover.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:url" content="https://applyguard.ph" />
+    <meta property="og:site_name" content="ApplyGuard PH" />
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="ApplyGuard PH — Check a remote job before you apply" />
+    <meta
+      name="twitter:description"
+      content="Paste a job post and get a straight answer: Apply, Caution, or Skip. Free. No sign-up. Built for Filipino remote workers."
+    />
+    <meta name="twitter:image" content="https://applyguard.ph/og-cover.png" />
+
+    <!-- Capacitor: must load before the React bundle in native app -->
+    <script type="module" src="/src/mobile.js"></script>
+    <link rel="manifest" href="/manifest.webmanifest" />
     <meta name="theme-color" content="#0b6e5f" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="ApplyGuard PH" />
+    <link rel="apple-touch-icon" href="/favicon.svg" />
+
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
 
     <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -24,3 +55,4 @@
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>
+

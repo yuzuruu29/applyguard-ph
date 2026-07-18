@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 import { useApp } from "../store.jsx";
 import { JOB_STATUSES } from "../lib/storage.js";
 import { VERDICT_TONE, RISK_TONE, STATUS_TONE } from "../lib/tone.js";
+import { trackerStats } from "../lib/stats.js";
 
 function fmtDate(iso) {
   if (!iso) return "";
@@ -23,7 +24,7 @@ function JobCard({ job, onStatus, onFollowUp, onNotes, onDelete, index = 0 }) {
         <div className="min-w-0">
           <Link
             to={`/result/${job.id}`}
-            className="font-display text-lg text-ink underline-offset-4 hover:underline"
+            className="inline-flex min-h-11 items-center font-display text-lg text-ink underline-offset-4 hover:underline"
           >
             {job.title || "Untitled job"}
           </Link>
@@ -49,7 +50,7 @@ function JobCard({ job, onStatus, onFollowUp, onNotes, onDelete, index = 0 }) {
             id={`status-${job.id}`}
             value={job.status}
             onChange={(e) => onStatus(job.id, e.target.value)}
-            className="w-full rounded-xl border border-line bg-paper px-3 py-2 text-sm text-ink focus:border-brand focus:outline-none"
+            className="min-h-11 w-full rounded-xl border border-line bg-paper px-3 py-2.5 text-sm text-ink focus:border-brand focus:outline-none"
           >
             {JOB_STATUSES.map((s) => (
               <option key={s} value={s}>
@@ -75,7 +76,7 @@ function JobCard({ job, onStatus, onFollowUp, onNotes, onDelete, index = 0 }) {
             type="date"
             value={job.followUpBy || ""}
             onChange={(e) => onFollowUp(job.id, e.target.value)}
-            className="w-full rounded-xl border border-line bg-paper px-3 py-2 text-sm text-ink focus:border-brand focus:outline-none"
+            className="min-h-11 w-full rounded-xl border border-line bg-paper px-3 py-2.5 text-sm text-ink focus:border-brand focus:outline-none"
           />
         </div>
       </div>
@@ -98,7 +99,7 @@ function JobCard({ job, onStatus, onFollowUp, onNotes, onDelete, index = 0 }) {
         <button
           type="button"
           onClick={() => onDelete(job)}
-          className="rounded-full px-3 py-1.5 text-sm font-medium text-stop-ink hover:bg-stop-soft focus-visible:outline-none"
+          className="inline-flex min-h-11 items-center rounded-full px-3 py-2 text-sm font-medium text-stop-ink hover:bg-stop-soft focus-visible:outline-none"
         >
           Remove
         </button>
@@ -109,6 +110,7 @@ function JobCard({ job, onStatus, onFollowUp, onNotes, onDelete, index = 0 }) {
 
 export default function Tracker() {
   const { jobs, updateJob, deleteJob, notify } = useApp();
+  const stats = trackerStats(jobs);
 
   const handleDelete = (job) => {
     if (window.confirm(`Remove "${job.title || "this job"}" from your tracker?`)) {
@@ -135,6 +137,28 @@ export default function Tracker() {
           Scan a job
         </Link>
       </div>
+
+      {/* Stats strip — only when there are saved jobs */}
+      {jobs.length > 0 && (
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <div className="rounded-2xl border border-line bg-card p-4 text-center">
+            <p className="font-mono text-2xl font-semibold text-ink">{stats.total}</p>
+            <p className="mt-0.5 text-xs text-ink-faint">Total saved</p>
+          </div>
+          <div className="rounded-2xl border border-line bg-card p-4 text-center">
+            <p className="font-mono text-2xl font-semibold text-go-ink">{stats.applied + stats.interview + stats.offer}</p>
+            <p className="mt-0.5 text-xs text-ink-faint">In progress</p>
+          </div>
+          <div className="rounded-2xl border border-line bg-card p-4 text-center">
+            <p className="font-mono text-2xl font-semibold text-stop-ink">{stats.highRiskDodged}</p>
+            <p className="mt-0.5 text-xs text-ink-faint">High-risk dodged</p>
+          </div>
+          <div className="rounded-2xl border border-line bg-card p-4 text-center">
+            <p className="font-mono text-2xl font-semibold text-ink-soft">{stats.avgScore !== null ? stats.avgScore : "—"}</p>
+            <p className="mt-0.5 text-xs text-ink-faint">Avg fit score</p>
+          </div>
+        </div>
+      )}
 
       {jobs.length === 0 ? (
         <div className="rounded-3xl border border-dashed border-line bg-card p-10 text-center">

@@ -1,7 +1,12 @@
 // store.jsx — app-wide state: settings, saved jobs, the in-memory last scan,
-// and toasts. Persists to localStorage with debounced writes (see lib/storage).
+// toasts, and cloud sync engine. Persists to localStorage with debounced writes
+// (see lib/storage). Cloud sync is an opt-in mirror — localStorage remains the
+// offline source of truth.
 import { createContext, useContext, useEffect, useRef, useState, useCallback } from "react";
 import * as storage from "./lib/storage.js";
+import * as cloud from "./lib/cloud.js";
+import { mergeJobs, mergeSettings } from "./lib/sync.js";
+import { useAuth } from "./auth.jsx";
 
 const AppContext = createContext(null);
 
@@ -44,6 +49,56 @@ export function AppProvider({ children }) {
       storage.flush();
     };
   }, []);
+
+  // ── cloud sync ───────────────────────────────────────────────────────
+  const { user } = useAuth();
+  const [sync, setSync] = useState({ at: "", error: "" });
+  const syncReady = useRef(false);
+  const syncTimer = useRef(null);
+  const jobsRef = useRef(jobs);
+  const settingsRef = useRef(settings);
+  jobsRef.current = jobs;
+  settingsRef.current = settings;
+
+  // Pull + merge on login (and clear the flag on logout).
+  useEffect(() => {
+    if (!user) {
+      syncReady.current = false;
+      setSync({ at: "", error: "" });
+      return undefined;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const remote = await cloud.pullState(user.id);
+        if (cancelled) return;
+        setJobs(mergeJobs(jobsRef.current, remote.jobs));
+        setSettings((s) => mergeSettings(s, remote.settings));
+        syncReady.current = true;
+        setSync({ at: new Date().toISOString(), error: "" });
+      } catch {
+        if (!cancelled) setSync({ at: "", error: "Cloud sync failed — your local copy is safe." });
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Debounced push on change (only once the first pull finished).
+  useEffect(() => {
+    if (!user || !syncReady.current) return undefined;
+    clearTimeout(syncTimer.current);
+    syncTimer.current = setTimeout(async () => {
+      try {
+        await cloud.pushState(user.id, { settings, jobs });
+        setSync({ at: new Date().toISOString(), error: "" });
+      } catch {
+        setSync((s) => ({ ...s, error: "Cloud sync failed — will retry on the next change." }));
+      }
+    }, 800);
+    return () => clearTimeout(syncTimer.current);
+  }, [settings, jobs, user]);
 
   // ── toasts ──────────────────────────────────────────────────────────
   const notify = useCallback((message, tone = "info") => {
@@ -123,6 +178,7 @@ export function AppProvider({ children }) {
     deleteJob,
     restoreState,
     resetAll,
+    sync,
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

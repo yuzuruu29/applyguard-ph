@@ -1,0 +1,32 @@
+{
+  "name": "ApplyGuard PH",
+  "short_name": "ApplyGuard",
+  "description": "Free job-post checker for Filipino remote workers. Checks a remote job post for scam signals, pay fit, and missing details before you apply.",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "theme_color": "#0b6e5f",
+  "background_color": "#f4efe4",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "share_target": {
+    "action": "/",
+    "method": "GET",
+    "params": {
+      "title": "title",
+      "text": "text"
+    }
+  },
+  "categories": ["productivity", "utilities"],
+  "lang": "en-PH",
+  "dir": "ltr",
+  "iarc_rating_id": "",
+  "prefer_related_applications": false
+}
+

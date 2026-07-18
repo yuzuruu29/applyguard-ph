@@ -2,6 +2,10 @@ import { useEffect, useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useApp } from "../store.jsx";
 import { VERDICT_TONE, RISK_TONE } from "../lib/tone.js";
+import { useCountUp } from "../hooks/useCountUp.js";
+import { copyToClipboard } from "../lib/clipboard.js";
+import { shareSummary } from "../lib/share.js";
+import AiAssistant from "./AiAssistant.jsx";
 
 function ScoreRing({ score, toneClass }) {
   const r = 52;
@@ -14,6 +18,8 @@ function ScoreRing({ score, toneClass }) {
     const id = requestAnimationFrame(() => setOffset(target));
     return () => cancelAnimationFrame(id);
   }, [target, c]);
+
+  const displayScore = useCountUp(score, 1200);
 
   return (
     <div className="relative h-32 w-32 shrink-0">
@@ -33,7 +39,7 @@ function ScoreRing({ score, toneClass }) {
         />
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <span className="font-mono text-3xl font-semibold text-ink">{score}</span>
+        <span className="font-mono text-3xl font-semibold text-ink">{displayScore}</span>
         <span className="font-mono text-[0.65rem] tracking-wider text-ink-faint">/ 100 FIT</span>
       </div>
     </div>
@@ -101,9 +107,10 @@ function NoResult() {
 export default function ResultView() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { result, getJob, saveJob, notify } = useApp();
+  const { result, getJob, saveJob, notify, settings } = useApp();
 
   const [copied, setCopied] = useState(false);
+  const [summaryCopied, setSummaryCopied] = useState(false);
 
   const isPreview = id === "preview";
   const data = isPreview ? result : getJob(id);
@@ -160,10 +167,23 @@ export default function ResultView() {
     }
   };
 
+  const copySummary = async () => {
+    try {
+      await copyToClipboard(shareSummary(data));
+      setSummaryCopied(true);
+      setTimeout(() => setSummaryCopied(false), 1900);
+    } catch {
+      notify("Couldn't copy verdict summary.", "error");
+    }
+  };
+
   return (
     <div className="space-y-7">
-      <div className="flex items-center justify-between gap-3">
-        <Link to="/" className="text-sm font-medium text-brand hover:text-brand-deep">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <Link
+          to="/"
+          className="inline-flex min-h-11 items-center text-sm font-medium text-brand hover:text-brand-deep"
+        >
           ← Scan another
         </Link>
         {!isPreview && (
@@ -171,6 +191,17 @@ export default function ResultView() {
             Saved to tracker
           </span>
         )}
+        <button
+          type="button"
+          onClick={copySummary}
+          className={`inline-flex min-h-11 items-center gap-2 rounded-full px-4 py-2 text-sm font-medium transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.99] focus-visible:outline-none ${
+            summaryCopied ? "bg-go text-paper" : "bg-panel text-ink-soft hover:bg-ink hover:text-paper"
+          }`}
+          aria-live="polite"
+        >
+          <span aria-hidden="true">{summaryCopied ? "✓" : "⧉"}</span>
+          {summaryCopied ? "Copied" : "Copy verdict summary"}
+        </button>
       </div>
 
       {/* ── Verdict + score ──────────────────────────────────────── */}
@@ -345,23 +376,12 @@ export default function ResultView() {
         </section>
       )}
 
-      {/* ── POST-RESULT optional extras CTA (only here, only after a result) ── */}
-      <section className="rise d6 rounded-3xl border border-brand/40 bg-brand/5 p-6 sm:p-8">
-        <p className="eyebrow text-brand-deep">Optional extras</p>
-        <h2 className="mt-2 font-display text-2xl text-ink">
-          Want more help after the scan?
-        </h2>
-        <p className="mt-2 max-w-2xl text-ink-soft">
-          Paid add-ons are listed separately, but checkout is not active yet. The scanner stays
-          free and usable without buying anything.
-        </p>
-        <Link
-          to="/offers"
-          className="mt-5 inline-block rounded-full bg-brand px-6 py-3 font-semibold text-paper transition-all duration-200 hover:-translate-y-0.5 hover:bg-brand-deep active:translate-y-0 active:scale-[0.99]"
-        >
-          See optional extras
-        </Link>
-      </section>
+      {/* ── Premium AI features ───────────────────────────────────── */}
+      <AiAssistant
+        rawText={data.rawText}
+        intake={data.intake}
+        settings={settings}
+      />
     </div>
   );
 }

@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <rect width="1200" height="630" fill="#f4efe4"/>
+  <rect x="40" y="40" width="1120" height="550" rx="28" fill="#fffdf7" stroke="#ddd3bf" stroke-width="2"/>
+  <g transform="translate(90,86) scale(1.35)">
+    <path d="M32 6 L54 14 V32 C54 46 44 55 32 59 C20 55 10 46 10 32 V14 Z" fill="#0b6e5f"/>
+    <path d="M22 33 L29.5 40.5 L43 25" fill="none" stroke="#f4efe4" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+  <text x="195" y="142" font-family="Fraunces, Georgia, serif" font-size="42" font-weight="600" fill="#1b1a17">ApplyGuard PH</text>
+  <text x="90" y="290" font-family="Fraunces, Georgia, serif" font-size="68" font-weight="600" fill="#1b1a17">Is this remote job worth</text>
+  <text x="90" y="372" font-family="Fraunces, Georgia, serif" font-size="68" font-weight="600" fill="#1b1a17">applying to, or a trap?</text>
+  <g font-family="Hanken Grotesk, system-ui, sans-serif" font-size="23" font-weight="600">
+    <rect x="90" y="428" width="222" height="52" rx="26" fill="#e3f1e6"/>
+    <text x="201" y="462" text-anchor="middle" fill="#155d33">Apply — go for it</text>
+    <rect x="332" y="428" width="252" height="52" rx="26" fill="#fae9c9"/>
+    <text x="458" y="462" text-anchor="middle" fill="#8a4d05">Caution — check first</text>
+    <rect x="604" y="428" width="240" height="52" rx="26" fill="#f8e0db"/>
+    <text x="724" y="462" text-anchor="middle" fill="#8a261b">Skip — not worth it</text>
+  </g>
+  <text x="90" y="545" font-family="Hanken Grotesk, system-ui, sans-serif" font-size="26" fill="#4a4842">Free job-post checker for Filipino remote workers. No sign-up — runs in your browser.</text>
+</svg>

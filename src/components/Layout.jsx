@@ -1,11 +1,15 @@
+import { useLayoutEffect } from "react";
 import { NavLink, Link, Outlet, useLocation } from "react-router-dom";
 import Toast from "./Toast.jsx";
+import { dueFollowUps } from "../lib/followups.js";
+import { useApp } from "../store.jsx";
 
 const NAV = [
   { to: "/", label: "Scan", end: true },
   { to: "/tracker", label: "Tracker" },
   { to: "/settings", label: "Settings" },
   { to: "/offers", label: "Offers" },
+  { to: "/account", label: "Account" },
 ];
 
 function ShieldMark() {
@@ -27,13 +31,31 @@ function ShieldMark() {
   );
 }
 
+function RouteScrollReset() {
+  const { pathname } = useLocation();
+
+  useLayoutEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+  }, [pathname]);
+
+  return null;
+}
+
 export default function Layout() {
   const location = useLocation();
+  const { jobs } = useApp();
+  const { overdue, today } = dueFollowUps(jobs);
+  const followUpCount = overdue.length + today.length;
   return (
     <div className="flex min-h-screen flex-col">
+      <RouteScrollReset />
       <header className="sticky top-0 z-40 border-b border-line bg-paper/85 backdrop-blur">
         <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-3 px-4 py-3">
-          <Link to="/" className="flex items-center gap-2" aria-label="ApplyGuard PH home">
+          <Link
+            to="/"
+            className="flex min-h-11 items-center gap-2"
+            aria-label="ApplyGuard PH home"
+          >
             <ShieldMark />
             <span className="font-display text-xl font-semibold leading-none text-ink">
               ApplyGuard
@@ -44,22 +66,33 @@ export default function Layout() {
           </Link>
 
           <nav aria-label="Primary" className="flex w-full items-center justify-between gap-1 sm:w-auto sm:justify-start sm:gap-2">
-            {NAV.map((item) => (
-              <NavLink
-                key={item.to}
-                to={item.to}
-                end={item.end}
-                className={({ isActive }) =>
-                  `rounded-full px-2.5 py-1.5 text-sm font-medium transition-colors sm:px-3 ${
-                    isActive
-                      ? "bg-ink text-paper"
-                      : "text-ink-soft hover:bg-panel hover:text-ink"
-                  }`
-                }
-              >
-                {item.label}
-              </NavLink>
-            ))}
+            {NAV.map((item) => {
+              const badge = item.label === "Tracker" && followUpCount > 0 ? followUpCount : 0;
+              return (
+                <NavLink
+                  key={item.to}
+                  to={item.to}
+                  end={item.end}
+                  className={({ isActive }) =>
+                    `inline-flex min-h-11 items-center gap-1.5 rounded-full px-3 py-2 text-sm font-medium transition-colors sm:px-4 ${
+                      isActive
+                        ? "bg-ink text-paper"
+                        : "text-ink-soft hover:bg-panel hover:text-ink"
+                    }`
+                  }
+                >
+                  {item.label}
+                  {badge > 0 && (
+                    <span
+                      className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-warn px-1 text-[0.65rem] font-bold leading-none text-paper"
+                      aria-label={`${badge} follow-up${badge > 1 ? "s" : ""} need attention`}
+                    >
+                      {badge}
+                    </span>
+                  )}
+                </NavLink>
+              );
+            })}
           </nav>
         </div>
       </header>
@@ -81,8 +114,8 @@ export default function Layout() {
             details or money.
           </p>
           <p className="mt-4 text-xs text-ink-faint">
-            Built for Filipino remote job seekers. Your scans and saved jobs stay in this
-            browser only.
+            Built for Filipino remote job seekers. The scanner runs in your browser — with an optional
+            account, your saved jobs sync across devices (still your data, in your private rows).
           </p>
         </div>
       </footer>

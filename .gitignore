@@ -8,3 +8,10 @@ dist-ssr
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+
+.vercel
+
+# Supabase local config (gitignored — use .env.example as template)
+.env
+.env.local
+.env.*.local
