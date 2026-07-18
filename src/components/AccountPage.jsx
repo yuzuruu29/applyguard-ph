@@ -2,7 +2,6 @@ import { useState, useRef } from "react";
 import { useLocation, Link } from "react-router-dom";
 import { useAuth } from "../auth.jsx";
 import { useApp } from "../store.jsx";
-import { cancelSubscription } from "../lib/billing.js";
 
 export default function AccountPage() {
   const { user, loading, backendEnabled, signInWithEmail, signOut, entitlement, tier, usageCount, aiCap, refreshEntitlement } = useAuth();
@@ -41,27 +40,6 @@ export default function AccountPage() {
       // Silently fail — the user is still signed out locally.
     }
   };
-
-  const [cancelling, setCancelling] = useState(false);
-  const handleCancel = async () => {
-    if (!window.confirm("Cancel auto-renew? You keep Premium until the paid period ends.")) return;
-    setCancelling(true);
-    try {
-      await cancelSubscription();
-      notify("Auto-renew cancelled. Premium stays until your paid-through date.", "success");
-      setTimeout(refreshEntitlement, 3000);
-    } catch (err) {
-      notify(err?.message || "Couldn't cancel. Try again.", "error");
-    } finally {
-      setCancelling(false);
-    }
-  };
-
-  // Show a success banner when returning from PayMongo checkout
-  const paid = new URLSearchParams(location.search).get("paid");
-  if (paid === "1" && tier === "free") {
-    setTimeout(refreshEntitlement, 3000);
-  }
 
   // ── Loading state ──────────────────────────────────────────────────
   if (loading) {
@@ -165,16 +143,6 @@ export default function AccountPage() {
         </p>
       </div>
 
-      {/* Payment success banner */}
-      {paid === "1" && (
-        <div className="rounded-2xl border border-go/40 bg-go-soft p-4">
-          <p className="font-semibold text-go-ink">Payment received</p>
-          <p className="mt-1 text-sm text-ink-soft">
-            Premium activates when PayMongo confirms, usually within seconds.
-          </p>
-        </div>
-      )}
-
       {/* Subscription status */}
       <section className="elev space-y-4 rounded-3xl border border-line bg-card p-6 sm:p-8">
         <h2 className="font-display text-xl text-ink">Subscription</h2>
@@ -184,22 +152,10 @@ export default function AccountPage() {
               Plan: <span className="font-semibold text-ink">Premium</span>.
               Status: <span className="font-semibold text-ink">{entitlement?.status || "active"}</span>.
               Paid through <span className="font-mono text-ink">{entitlement?.current_period_end || "—"}</span>.
-              {entitlement?.status === "cancelled" && " Auto-renew is off — you keep Premium until that date."}
-              {entitlement?.status === "past_due" && " Your latest payment failed — update your card; PayMongo retries daily for 3 days."}
             </p>
             <p className="text-sm text-ink-soft">
               AI uses this month: <span className="font-mono text-ink">{usageCount} / {aiCap}</span>
             </p>
-            {entitlement?.provider_subscription_id && entitlement?.status !== "cancelled" && (
-              <button
-                type="button"
-                onClick={handleCancel}
-                disabled={cancelling}
-                className="rounded-full border border-stop/40 bg-stop-soft px-5 py-2.5 text-sm font-semibold text-stop-ink transition-colors hover:border-stop disabled:opacity-60"
-              >
-                {cancelling ? "Cancelling…" : "Cancel auto-renew"}
-              </button>
-            )}
           </>
         ) : (
           <>

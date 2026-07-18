@@ -4,37 +4,18 @@ import { PayPalScriptProvider, PayPalButtons } from "@paypal/react-paypal-js";
 import { useAuth } from "../auth.jsx";
 import { useApp } from "../store.jsx";
 import { PLANS, AI_FEATURES } from "../lib/pricing.js";
-import { startCheckout, createPayPalOrder, capturePayPalOrder } from "../lib/billing.js";
+import { createPayPalOrder, capturePayPalOrder } from "../lib/billing.js";
 
 const TIER_CARDS = [
   { ...PLANS.monthly, featured: false, icon: "🔄" },
   { ...PLANS.yearly, featured: true, icon: "⭐" },
-  { ...PLANS.gcash_30d, featured: false, icon: "📱" },
 ];
 
 export default function OffersPage() {
   const { user, backendEnabled, tier: currentTier } = useAuth();
-  const { notify } = useApp();
-  const navigate = useNavigate();
   const [checkingOut, setCheckingOut] = useState(null);
 
   const paypalClientId = import.meta.env.VITE_PAYPAL_CLIENT_ID || "test";
-
-  const handleCheckout = async (planId) => {
-    if (!user) {
-      navigate("/account");
-      notify("Sign in first to get Premium.", "info");
-      return;
-    }
-    setCheckingOut(planId);
-    try {
-      const url = await startCheckout(planId);
-      window.location.href = url;
-    } catch (err) {
-      notify(err?.message || "Checkout failed. Try again.", "error");
-      setCheckingOut(null);
-    }
-  };
 
   const handlePayPalApprove = async (data, actions) => {
     try {
@@ -96,27 +77,31 @@ export default function OffersPage() {
                   </li>
                 ))}
               </ul>
-              {plan.id === "gcash_30d" && (
-                <p className="mt-3 rounded-xl bg-warn-soft/50 px-3 py-2 text-xs text-warn-ink">
-                  GCash does not support auto-renew. Come back each month to renew manually.
-                </p>
-              )}
               <div className="mt-6 flex flex-col gap-2">
-                <button type="button"
-                  disabled={!backendEnabled || currentTier === "premium" || checkingOut !== null}
-                  onClick={() => handleCheckout(plan.id)}
-                  className={`w-full rounded-full px-5 py-3 text-center font-semibold transition-all duration-200 ${
-                    plan.featured
-                      ? "bg-brand text-paper hover:-translate-y-0.5 hover:bg-brand-deep active:translate-y-0 active:scale-[0.99] disabled:opacity-60 disabled:cursor-not-allowed disabled:transform-none"
-                      : "border border-brand bg-card text-brand hover:bg-brand hover:text-paper disabled:opacity-60 disabled:cursor-not-allowed"}`}>
-                  {checkingOut === plan.id ? "Redirecting…" : !user ? "Sign in to subscribe" : currentTier === "premium" ? "Already Premium" : "Pay with GCash / Card"}
-                </button>
-                
-                {backendEnabled && currentTier !== "premium" && user && (
-                  <div className="mt-2 w-full">
+                {!user ? (
+                  <button type="button"
+                    onClick={() => {
+                      navigate("/account");
+                      notify("Sign in first to get Premium.", "info");
+                    }}
+                    className={`w-full rounded-full px-5 py-3 text-center font-semibold transition-all duration-200 ${
+                      plan.featured
+                        ? "bg-brand text-paper hover:-translate-y-0.5 hover:bg-brand-deep"
+                        : "border border-brand bg-card text-brand hover:bg-brand hover:text-paper"}`}>
+                    Sign in to buy
+                  </button>
+                ) : currentTier === "premium" ? (
+                  <button type="button" disabled
+                    className="w-full rounded-full px-5 py-3 text-center font-semibold bg-panel text-ink-faint border border-line cursor-not-allowed">
+                    Already Premium
+                  </button>
+                ) : backendEnabled && (
+                  <div className="w-full">
+                    {checkingOut === plan.id && <p className="mb-2 text-center text-sm font-medium text-brand">Processing payment…</p>}
                     <PayPalButtons 
                       style={{ layout: "horizontal", height: 48, color: "gold", shape: "pill" }}
                       createOrder={async () => {
+                        setCheckingOut(plan.id);
                         return await createPayPalOrder(plan.id);
                       }}
                       onApprove={handlePayPalApprove}
@@ -129,8 +114,6 @@ export default function OffersPage() {
                   </div>
                 )}
               </div>
-              {plan.kind === "manual_renewal" && <p className="mt-2 text-center text-xs text-ink-faint">GCash & PayPal — one-time, renews manually.</p>}
-              {plan.kind === "subscription" && <p className="mt-2 text-center text-xs text-ink-faint">PayMongo (Card) — Auto-renews until cancelled. PayPal — One-time.</p>}
             </div>
           ))}
         </div>
@@ -222,17 +205,22 @@ export default function OffersPage() {
         </div>
         <p className="mt-2 text-ink-soft">{PLANS.pack.blurb}</p>
         <div className="mt-4 flex flex-col gap-2">
-          <button type="button" disabled={!backendEnabled || checkingOut !== null}
-            onClick={() => handleCheckout("pack")}
-            className="rounded-full border border-brand bg-card px-6 py-3 font-semibold text-brand transition-all duration-200 hover:bg-brand hover:text-paper disabled:opacity-60 disabled:cursor-not-allowed">
-            {checkingOut === "pack" ? "Redirecting…" : !user ? "Sign in to buy" : "Buy with GCash / Card"}
-          </button>
-          
-          {backendEnabled && user && (
-            <div className="mt-2 w-full max-w-sm">
+          {!user ? (
+            <button type="button"
+              onClick={() => {
+                navigate("/account");
+                notify("Sign in first to buy.", "info");
+              }}
+              className="rounded-full border border-brand bg-card px-6 py-3 font-semibold text-brand transition-all duration-200 hover:bg-brand hover:text-paper">
+              Sign in to buy
+            </button>
+          ) : backendEnabled && (
+            <div className="w-full max-w-sm">
+              {checkingOut === "pack" && <p className="mb-2 text-sm font-medium text-brand">Processing payment…</p>}
               <PayPalButtons 
                 style={{ layout: "horizontal", height: 48, color: "gold", shape: "pill" }}
                 createOrder={async () => {
+                  setCheckingOut("pack");
                   return await createPayPalOrder("pack");
                 }}
                 onApprove={handlePayPalApprove}
