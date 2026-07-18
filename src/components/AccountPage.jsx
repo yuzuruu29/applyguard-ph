@@ -214,6 +214,27 @@ export default function AccountPage() {
         )}
       </section>
 
+      {/* Purchased items */}
+      {entitlement?.has_message_pack && (
+        <section className="elev space-y-4 rounded-3xl border border-line bg-card p-6 sm:p-8">
+          <h2 className="font-display text-xl text-ink">Purchased Items</h2>
+          <div className="rounded-2xl border border-line bg-paper p-4 flex items-center justify-between">
+            <div>
+              <p className="font-semibold text-ink">Message Pack</p>
+              <p className="text-sm text-ink-soft">20 message templates</p>
+            </div>
+            <a
+              href="/MessagePack.pdf"
+              target="_blank"
+              download
+              className="rounded-full bg-brand/10 px-4 py-2 text-sm font-semibold text-brand transition-colors hover:bg-brand/20"
+            >
+              Download PDF
+            </a>
+          </div>
+        </section>
+      )}
+
       {/* Sync status */}
       <section className="elev space-y-4 rounded-3xl border border-line bg-card p-6 sm:p-8">
         <h2 className="font-display text-xl text-ink">Cloud sync</h2>

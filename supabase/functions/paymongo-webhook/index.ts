@@ -106,8 +106,15 @@ serve(async (req) => {
         provider_payment_id: eventId,
         updated_at: new Date().toISOString(),
       }, { onConflict: "user_id" });
+    } else if (plan === "pack") {
+      // Unlock the one-time Message Pack
+      await supabase.from("entitlements").upsert({
+        user_id: userId,
+        has_message_pack: true,
+        provider_payment_id: eventId,
+        updated_at: new Date().toISOString(),
+      }, { onConflict: "user_id" });
     }
-    // For "pack" (one-time), no entitlement change — handled by email delivery
   }
 
   return new Response(JSON.stringify({ received: true }), { status: 200 });

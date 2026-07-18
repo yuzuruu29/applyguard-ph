@@ -81,6 +81,7 @@ create table if not exists public.entitlements (
   provider_subscription_id text,
   provider_payment_id     text,
   plan_id                 text,
+  has_message_pack        boolean not null default false,
   created_at              timestamptz not null default now(),
   updated_at              timestamptz not null default now()
 );
