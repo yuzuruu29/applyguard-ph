@@ -15,3 +15,8 @@ yarn-error.log*
 .env
 .env.local
 .env.*.local
+supabase-go.exe
+supabase.exe
+supabase_cli.zip
+.env.vercel
+supabase/.temp/

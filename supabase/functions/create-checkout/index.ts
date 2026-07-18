@@ -82,13 +82,21 @@ serve(async (req) => {
     body: JSON.stringify({
       data: {
         attributes: {
-          amount,
-          currency: "PHP",
-          description: desc,
-          redirect: { success, failed: `${APP_ORIGIN}/offers` },
+          line_items: [
+            {
+              name: desc,
+              description: desc,
+              amount: amount,
+              currency: "PHP",
+              quantity: 1,
+            }
+          ],
           payment_method_types: planId === "gcash_30d" ? ["gcash"] : ["gcash", "card", "paymaya"],
-          metadata: { user_id: user.id, plan: planId },
+          success_url: success,
+          cancel_url: `${APP_ORIGIN}/offers`,
+          description: desc,
           send_email_receipt: true,
+          metadata: { user_id: user.id, plan: planId },
         },
       },
     }),
