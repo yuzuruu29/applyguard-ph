@@ -17,13 +17,23 @@ const auth = btoa(PAYMONGO_SK + ":");
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+};
+
 serve(async (req) => {
+  // Handle CORS preflight requests
+  if (req.method === "OPTIONS") {
+    return new Response("ok", { headers: corsHeaders });
+  }
+
   // Auth — must be a logged-in user
   const authHeader = req.headers.get("Authorization");
-  if (!authHeader) return new Response(JSON.stringify({ error: "Missing auth" }), { status: 401 });
+  if (!authHeader) return new Response(JSON.stringify({ error: "Missing auth" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
   const token = authHeader.replace("Bearer ", "");
   const { data: { user }, error: authErr } = await supabase.auth.getUser(token);
-  if (authErr || !user) return new Response(JSON.stringify({ error: "Invalid token" }), { status: 401 });
+  if (authErr || !user) return new Response(JSON.stringify({ error: "Invalid token" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
   const { plan: planId } = await req.json();
 
@@ -52,8 +62,8 @@ serve(async (req) => {
       }),
     });
     const subBody = await subRes.json();
-    if (!subRes.ok) return new Response(JSON.stringify({ error: subBody.errors?.[0]?.detail || "Subscription creation failed" }), { status: 400 });
-    return new Response(JSON.stringify({ checkout_url: subBody.data.attributes.redirect.checkout_url }));
+    if (!subRes.ok) return new Response(JSON.stringify({ error: subBody.errors?.[0]?.detail || "Subscription creation failed" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    return new Response(JSON.stringify({ checkout_url: subBody.data.attributes.redirect.checkout_url }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
   }
 
   // GCash / one-time → PayMongo checkout session
@@ -84,6 +94,6 @@ serve(async (req) => {
     }),
   });
   const chkBody = await chkRes.json();
-  if (!chkRes.ok) return new Response(JSON.stringify({ error: chkBody.errors?.[0]?.detail || "Checkout creation failed" }), { status: 400 });
-  return new Response(JSON.stringify({ checkout_url: chkBody.data.attributes.checkout_url }));
+  if (!chkRes.ok) return new Response(JSON.stringify({ error: chkBody.errors?.[0]?.detail || "Checkout creation failed" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+  return new Response(JSON.stringify({ checkout_url: chkBody.data.attributes.checkout_url }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
 });

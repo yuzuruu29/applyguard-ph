@@ -14,13 +14,23 @@ const auth = btoa(PAYMONGO_SK + ":");
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+};
+
 serve(async (req) => {
+  // Handle CORS preflight requests
+  if (req.method === "OPTIONS") {
+    return new Response("ok", { headers: corsHeaders });
+  }
+
   // Auth
   const authHeader = req.headers.get("Authorization");
-  if (!authHeader) return new Response(JSON.stringify({ error: "Missing auth" }), { status: 401 });
+  if (!authHeader) return new Response(JSON.stringify({ error: "Missing auth" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
   const token = authHeader.replace("Bearer ", "");
   const { data: { user }, error: authErr } = await supabase.auth.getUser(token);
-  if (authErr || !user) return new Response(JSON.stringify({ error: "Invalid token" }), { status: 401 });
+  if (authErr || !user) return new Response(JSON.stringify({ error: "Invalid token" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
   // Look up the subscription
   const { data: ent } = await supabase
@@ -30,7 +40,7 @@ serve(async (req) => {
     .maybeSingle();
 
   if (!ent?.provider_subscription_id) {
-    return new Response(JSON.stringify({ error: "No active subscription found" }), { status: 400 });
+    return new Response(JSON.stringify({ error: "No active subscription found" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
   }
 
   // Cancel at PayMongo
@@ -45,8 +55,8 @@ serve(async (req) => {
 
   const cancelBody = await cancelRes.json();
   if (!cancelRes.ok) {
-    return new Response(JSON.stringify({ error: cancelBody.errors?.[0]?.detail || "Cancel failed at PayMongo" }), { status: 400 });
+    return new Response(JSON.stringify({ error: cancelBody.errors?.[0]?.detail || "Cancel failed at PayMongo" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
   }
 
-  return new Response(JSON.stringify({ cancelled: true }), { status: 200 });
+  return new Response(JSON.stringify({ cancelled: true }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 });
