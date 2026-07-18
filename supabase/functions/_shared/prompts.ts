@@ -2,7 +2,7 @@
 // The job post is always fenced so the model treats it as data, never
 // as instructions (prompt-injection guard).
 
-type Feature = "message" | "deepscan" | "resume" | "interview";
+type Feature = "message" | "deepscan" | "resume" | "interview" | "interview_voice";
 
 interface PromptInput {
   rawText: string;
@@ -120,5 +120,19 @@ export const FEATURES: Record<Feature, { system: string; maxTokens: number; buil
       "",
       "Format as markdown. Keep answer suggestions practical and honest — no \"I'm passionate about\" filler.",
     ].join("\n"),
+  },
+
+  interview_voice: {
+    maxTokens: 300,
+    system:
+      "You are a professional, friendly hiring manager conducting a mock interview for a remote job. " +
+      "The user will provide the job description and their background in their first message. " +
+      "Your instructions: \n" +
+      "1. Ask ONE question at a time. Wait for the user's response.\n" +
+      "2. Keep your responses short, conversational, and natural, like spoken dialogue.\n" +
+      "3. Occasionally provide brief feedback on their previous answer before asking the next question.\n" +
+      "4. Do NOT use markdown formatting, emojis, or lists, as your text will be read aloud by a text-to-speech engine. Spell out numbers or symbols if necessary.\n" +
+      "5. Conclude the interview after 4 to 5 questions.",
+    build: (input) => "", // unused for voice interview, we pass messages array directly
   },
 };

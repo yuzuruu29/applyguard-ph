@@ -9,11 +9,15 @@ import { createPayPalOrder, capturePayPalOrder } from "../lib/billing.js";
 const TIER_CARDS = [
   { ...PLANS.monthly, featured: false, icon: "🔄" },
   { ...PLANS.yearly, featured: true, icon: "⭐" },
+  { ...PLANS.pack, featured: false, icon: "✉️" },
 ];
 
 export default function OffersPage() {
   const { user, backendEnabled, tier: currentTier } = useAuth();
+  const { notify } = useApp();
+  const navigate = useNavigate();
   const [checkingOut, setCheckingOut] = useState(null);
+  const [packIndustry, setPackIndustry] = useState("tech");
 
   const paypalClientId = import.meta.env.VITE_PAYPAL_CLIENT_ID || "test";
 
@@ -69,14 +73,33 @@ export default function OffersPage() {
                 <span className="text-sm text-ink-faint">{plan.periodDisplay}</span>
               </div>
               <p className="mt-3 text-ink-soft">{plan.blurb}</p>
-              <ul className="mt-4 flex-1 space-y-2 text-sm text-ink">
-                {AI_FEATURES.map((f) => (
-                  <li key={f.id} className="flex items-start gap-2">
-                    <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-brand" aria-hidden="true" />
-                    <span>{f.name}</span>
-                  </li>
-                ))}
-              </ul>
+              
+              {plan.id !== "pack" ? (
+                <ul className="mt-4 flex-1 space-y-2 text-sm text-ink">
+                  {AI_FEATURES.map((f) => (
+                    <li key={f.id} className="flex items-start gap-2">
+                      <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-brand" aria-hidden="true" />
+                      <span>{f.name}</span>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <div className="mt-4 flex-1 flex flex-col gap-3">
+                  <label className="text-sm font-semibold text-ink">Select Industry</label>
+                  <select 
+                    value={packIndustry} 
+                    onChange={(e) => setPackIndustry(e.target.value)}
+                    className="w-full rounded-xl border border-line bg-paper px-3 py-2 text-sm text-ink outline-none focus:border-brand"
+                  >
+                    <option value="tech">Tech / Engineering</option>
+                    <option value="creative">Creative / Design</option>
+                    <option value="admin">Admin / Operations</option>
+                    <option value="marketing">Marketing / Sales</option>
+                    <option value="finance">Finance / Accounting</option>
+                  </select>
+                </div>
+              )}
+
               <div className="mt-6 flex flex-col gap-2">
                 {!user ? (
                   <button type="button"
@@ -90,7 +113,7 @@ export default function OffersPage() {
                         : "border border-brand bg-card text-brand hover:bg-brand hover:text-paper"}`}>
                     Sign in to buy
                   </button>
-                ) : currentTier === "premium" ? (
+                ) : currentTier === "premium" && plan.id !== "pack" ? (
                   <button type="button" disabled
                     className="w-full rounded-full px-5 py-3 text-center font-semibold bg-panel text-ink-faint border border-line cursor-not-allowed">
                     Already Premium
@@ -102,7 +125,7 @@ export default function OffersPage() {
                       style={{ layout: "horizontal", height: 48, color: "gold", shape: "pill" }}
                       createOrder={async () => {
                         setCheckingOut(plan.id);
-                        return await createPayPalOrder(plan.id);
+                        return await createPayPalOrder(plan.id, plan.id === "pack" ? { industry: packIndustry } : null);
                       }}
                       onApprove={handlePayPalApprove}
                       onError={(err) => {
@@ -197,43 +220,6 @@ export default function OffersPage() {
         </div>
       </section>
 
-      <section className="elev rounded-3xl border border-line bg-card p-6 sm:p-8">
-        <h2 className="font-display text-xl text-ink">{PLANS.pack.name}</h2>
-        <div className="mt-1 flex items-baseline gap-1.5">
-          <span className="font-mono text-2xl font-semibold text-ink">{PLANS.pack.priceDisplay}</span>
-          <span className="text-sm text-ink-faint">one time</span>
-        </div>
-        <p className="mt-2 text-ink-soft">{PLANS.pack.blurb}</p>
-        <div className="mt-4 flex flex-col gap-2">
-          {!user ? (
-            <button type="button"
-              onClick={() => {
-                navigate("/account");
-                notify("Sign in first to buy.", "info");
-              }}
-              className="rounded-full border border-brand bg-card px-6 py-3 font-semibold text-brand transition-all duration-200 hover:bg-brand hover:text-paper">
-              Sign in to buy
-            </button>
-          ) : backendEnabled && (
-            <div className="w-full max-w-sm">
-              {checkingOut === "pack" && <p className="mb-2 text-sm font-medium text-brand">Processing payment…</p>}
-              <PayPalButtons 
-                style={{ layout: "horizontal", height: 48, color: "gold", shape: "pill" }}
-                createOrder={async () => {
-                  setCheckingOut("pack");
-                  return await createPayPalOrder("pack");
-                }}
-                onApprove={handlePayPalApprove}
-                onError={(err) => {
-                  notify("PayPal checkout failed or was cancelled.", "error");
-                  setCheckingOut(null);
-                }}
-                onCancel={() => setCheckingOut(null)}
-              />
-            </div>
-          )}
-        </div>
-      </section>
       <p className="text-sm text-ink-soft">
         Looking for the free tool?{" "}
         <Link to="/" className="font-medium text-brand hover:text-brand-deep">Go back and scan a job</Link>.

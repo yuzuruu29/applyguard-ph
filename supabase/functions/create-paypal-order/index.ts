@@ -47,10 +47,13 @@ serve(async (req) => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error("Not authenticated");
 
-    const { plan } = await req.json();
+    const { plan, metadata } = await req.json();
     if (!PLANS[plan]) throw new Error("Invalid plan ID");
 
     const accessToken = await generateAccessToken();
+    
+    // Merge userId and plan into metadata if provided, otherwise create base object
+    const customIdData = { userId: user.id, plan, ...(metadata || {}) };
 
     const response = await fetch(`${PAYPAL_API_BASE}/v2/checkout/orders`, {
       method: "POST",
@@ -68,7 +71,7 @@ serve(async (req) => {
               value: PLANS[plan].price,
             },
             description: PLANS[plan].name,
-            custom_id: JSON.stringify({ userId: user.id, plan }),
+            custom_id: JSON.stringify(customIdData),
           },
         ],
       }),

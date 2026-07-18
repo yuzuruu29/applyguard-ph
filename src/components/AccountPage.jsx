@@ -156,6 +156,16 @@ export default function AccountPage() {
             <p className="text-sm text-ink-soft">
               AI uses this month: <span className="font-mono text-ink">{usageCount} / {aiCap}</span>
             </p>
+            <div className="pt-4 mt-4 border-t border-line">
+              <h3 className="font-display text-lg text-ink mb-2">Voice Mock Interview</h3>
+              <p className="text-sm text-ink-soft mb-3">Practice live voice interviews with our AI hiring manager.</p>
+              <Link
+                to="/mock-interview"
+                className="inline-block rounded-full bg-brand px-6 py-2.5 font-semibold text-paper transition-all duration-200 hover:-translate-y-0.5 hover:bg-brand-deep"
+              >
+                Start Interview
+              </Link>
+            </div>
           </>
         ) : (
           <>

@@ -36,8 +36,14 @@ serve(async (req) => {
     return new Response(JSON.stringify({ error: `Unknown feature: ${feature}` }), { status: 400 });
   }
 
-  if (!body.rawText || !body.rawText.trim()) {
+  const isVoiceInterview = feature === "interview_voice";
+
+  // For regular features, require rawText (the job post). For voice interview, we expect an array of messages.
+  if (!isVoiceInterview && (!body.rawText || !body.rawText.trim())) {
     return new Response(JSON.stringify({ error: "No job post text provided" }), { status: 400 });
+  }
+  if (isVoiceInterview && (!body.messages || !Array.isArray(body.messages) || body.messages.length === 0)) {
+    return new Response(JSON.stringify({ error: "No conversation messages provided" }), { status: 400 });
   }
 
   // ── Entitlement check ─────────────────────────────────────────────
@@ -67,12 +73,17 @@ serve(async (req) => {
 
   // ── Build prompt + call Anthropic ─────────────────────────────────
   const config = FEATURES[feature as keyof typeof FEATURES];
-  const prompt = config.build({
-    rawText: body.rawText,
-    intake: body.intake,
-    settings: body.settings,
-    extra: body.extra,
-  });
+  const anthropicMessages = isVoiceInterview 
+    ? body.messages 
+    : [{ 
+        role: "user", 
+        content: config.build({
+          rawText: body.rawText,
+          intake: body.intake,
+          settings: body.settings,
+          extra: body.extra,
+        }) 
+      }];
 
   try {
     const aiRes = await fetch("https://api.anthropic.com/v1/messages", {
@@ -86,7 +97,7 @@ serve(async (req) => {
         model: ANTHROPIC_MODEL,
         max_tokens: config.maxTokens,
         system: config.system,
-        messages: [{ role: "user", content: prompt }],
+        messages: anthropicMessages,
       }),
     });
 

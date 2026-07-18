@@ -9,6 +9,8 @@ import Settings from "./components/Settings.jsx";
 import OffersPage from "./components/OffersPage.jsx";
 import AccountPage from "./components/AccountPage.jsx";
 
+import MockInterviewPage from "./components/MockInterviewPage.jsx";
+
 function NotFound() {
   return (
     <div className="rounded-3xl border border-line bg-card p-10 text-center">
@@ -36,6 +38,7 @@ export default function App() {
             <Route path="/settings" element={<Settings />} />
             <Route path="/offers" element={<OffersPage />} />
             <Route path="/account" element={<AccountPage />} />
+            <Route path="/mock-interview" element={<MockInterviewPage />} />
             <Route path="*" element={<NotFound />} />
           </Route>
         </Routes>
