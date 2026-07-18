@@ -203,18 +203,42 @@ export default function OffersPage() {
             </div>
           </div>
 
-          {/* Interview Prep */}
-          <div className="flex flex-col gap-3">
+          {/* Interview Prep / Voice Mock Interview */}
+          <div className="flex flex-col gap-3 md:col-span-2">
             <div className="flex items-center gap-2">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-warn/10 text-xl" aria-hidden="true">🎯</div>
-              <h3 className="font-display text-lg text-ink">Custom Interview Prep</h3>
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-warn/10 text-xl" aria-hidden="true">🎙️</div>
+              <h3 className="font-display text-lg text-ink">Live Voice Mock Interview</h3>
             </div>
             <p className="text-sm text-ink-soft">
-              Walk into your interview with confidence. Get realistic practice questions based directly on the duties listed in the job description.
+              Practice answering questions live with an AI hiring manager. It listens to your voice and responds conversationally.
             </p>
-            <div className="mt-auto rounded-xl border border-warn/30 bg-warn/5 p-4 relative">
-              <div className="absolute -top-3 right-4 rounded bg-paper px-2 text-xs font-semibold text-warn-ink border border-warn/30">Example</div>
-              <p className="text-sm text-ink-soft"><span className="font-semibold text-warn-ink">Practice Question:</span> "Can you walk us through a time you had to optimize a React application's performance to handle large datasets?"</p>
+            <div className="mt-auto rounded-xl border border-line bg-card p-4 relative shadow-sm max-h-60 overflow-y-auto space-y-3">
+              <div className="absolute -top-3 right-4 rounded bg-paper px-2 text-xs font-semibold text-warn-ink border border-line shadow-sm">Sample Interview</div>
+              <div className="flex flex-col items-start mt-2">
+                <span className="mb-1 text-[10px] font-bold text-ink-faint uppercase tracking-wider">AI Hiring Manager</span>
+                <div className="max-w-[85%] rounded-2xl px-3 py-2 text-sm bg-paper border border-line text-ink">
+                  Hello! I see you have a strong background in React. Can you tell me about a time you optimized a slow-loading web application?
+                </div>
+              </div>
+              <div className="flex flex-col items-end">
+                <span className="mb-1 text-[10px] font-bold text-ink-faint uppercase tracking-wider">You (Voice)</span>
+                <div className="max-w-[85%] rounded-2xl px-3 py-2 text-sm bg-brand text-paper">
+                  Yes, in my last project, we had a large dashboard that took 5 seconds to load. I implemented lazy loading for the charts and paginated the data, which brought the load time down to under a second.
+                </div>
+              </div>
+              <div className="flex flex-col items-start">
+                <span className="mb-1 text-[10px] font-bold text-ink-faint uppercase tracking-wider">AI Hiring Manager</span>
+                <div className="max-w-[85%] rounded-2xl px-3 py-2 text-sm bg-paper border border-line text-ink">
+                  That's a great practical example. How did you handle the state management for that paginated data?
+                </div>
+              </div>
+              <div className="flex flex-col items-end">
+                <span className="mb-1 text-[10px] font-bold text-ink-faint uppercase tracking-wider">You (Voice)</span>
+                <div className="max-w-[85%] rounded-2xl px-3 py-2 text-sm bg-brand/50 text-paper italic flex items-center gap-2">
+                  <span className="h-1.5 w-1.5 rounded-full bg-paper animate-pulse"></span>
+                  Listening...
+                </div>
+              </div>
             </div>
           </div>
         </div>
