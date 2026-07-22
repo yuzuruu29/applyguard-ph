@@ -163,9 +163,9 @@ begin
   end if;
 
   -- 5. Paid vs Trial quota checks
-  if v_ent.tier = 'premium' 
-     and v_ent.status = 'active' 
-     and v_ent.current_period_end is not null 
+  if v_ent.tier = 'premium'
+     and v_ent.status = 'active'
+     and v_ent.current_period_end is not null
      and v_ent.current_period_end >= current_date then
     v_ent_type := 'paid';
 
@@ -249,8 +249,7 @@ revoke all on function public.reserve_ai_feature_usage(uuid, text, text) from pu
 grant execute on function public.reserve_ai_feature_usage(uuid, text, text) to service_role;
 
 ------------------------------------------------------------
--- 5. Atomic RPC: settle_ai_feature_usage
--- Explicitly drop old signature returning void before creating returning boolean
+-- 5. Atomic RPC: settle_ai_feature_usage with Strict Transition Matrix & Cost Capping
 ------------------------------------------------------------
 drop function if exists public.settle_ai_feature_usage(text, text, integer, integer, integer, integer, numeric);
 
@@ -282,19 +281,27 @@ begin
     where request_id = p_request_id
     for update;
 
-  -- Idempotency check: if already settled or in terminal completed/failed state, return true
   if not found then
     return false;
   end if;
 
-  if v_ledger.status in ('completed', 'failed', 'released') then
+  -- Idempotency check: if requested status is identical to current status, return true
+  if v_ledger.status = p_status then
     return true;
   end if;
 
-  v_actual_cost := greatest(0.000000, p_cost_usd);
+  -- Enforce state transition matrix
+  -- Terminal states ('completed', 'failed', 'released') cannot be changed
+  if v_ledger.status in ('completed', 'failed', 'released') then
+    return false;
+  end if;
+
+  -- Cap actual cost to reserved cost to guarantee $10.00 budget ceiling is never breached
+  v_actual_cost := least(greatest(0.000000, p_cost_usd), v_ledger.reserved_cost_usd);
   v_budget_date := (v_ledger.created_at at time zone 'UTC')::date;
 
   if p_status = 'provider_completed' then
+    if v_ledger.status <> 'reserved' then return false; end if;
     update public.ai_usage_ledger
       set status = 'provider_completed',
           input_tokens = greatest(0, p_input_tokens),
@@ -305,14 +312,18 @@ begin
           completed_at = now()
       where request_id = p_request_id;
     return true;
+
   elsif p_status = 'settlement_pending' then
+    if v_ledger.status not in ('reserved', 'provider_completed') then return false; end if;
     update public.ai_usage_ledger
       set status = 'settlement_pending',
           estimated_cost_usd = v_actual_cost,
           completed_at = now()
       where request_id = p_request_id;
     return true;
+
   elsif p_status = 'completed' then
+    if v_ledger.status not in ('reserved', 'provider_completed', 'settlement_pending') then return false; end if;
     update public.ai_usage_ledger
       set status = 'completed',
           input_tokens = greatest(0, p_input_tokens),
@@ -330,8 +341,12 @@ begin
       where budget_date = v_budget_date;
 
     return true;
-  else
-    -- failed or released
+
+  elsif p_status in ('failed', 'released') then
+    -- 'failed' or 'released' transitions are only allowed from 'reserved' state!
+    -- NEVER allow failing a request that already reached 'provider_completed' or 'settlement_pending'.
+    if v_ledger.status <> 'reserved' then return false; end if;
+
     update public.ai_usage_ledger
       set status = p_status,
           completed_at = now()
@@ -343,6 +358,8 @@ begin
       where budget_date = v_budget_date;
 
     return true;
+  else
+    return false;
   end if;
 end;
 $$;
