@@ -2,7 +2,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { FEATURES } from "../_shared/prompts.ts";
 import { ApiError, errorResponse, jsonResponse, optionsResponse, requestId } from "../_shared/http.ts";
-import { calculateHaikuCostUsd, DAILY_BUDGET_CIRCUIT_BREAKER } from "../_shared/budget.ts";
+import { calculateHaikuCostUsd } from "../_shared/budget.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -122,9 +122,7 @@ serve(async (req) => {
       }
     }
 
-
-
-    // 4. Call reserve_ai_feature_usage RPC
+    // 3. Call reserve_ai_feature_usage RPC
     const { data: reservation, error: rpcError } = await supabase.rpc("reserve_ai_feature_usage", {
       p_user_id: user.id,
       p_feature: feature,
@@ -151,7 +149,7 @@ serve(async (req) => {
     const resRecord = Array.isArray(reservation) ? reservation[0] : reservation;
     const entitlementType = resRecord?.entitlement_type || "trial";
 
-    // 5. Call Anthropic Messages API with Haiku 4.5 & Prompt Caching
+    // 4. Call Anthropic Messages API with Haiku 4.5 & Prompt Caching
     const config = FEATURES[feature as keyof typeof FEATURES];
     const maxTokens = OUTPUT_MAX_TOKENS[feature] || config.maxTokens || 1000;
 
@@ -206,7 +204,7 @@ serve(async (req) => {
         throw new ApiError(502, "AI_EMPTY_RESPONSE", "The AI provider returned an empty response. Please try again.", { retryable: true });
       }
 
-      // 6. Record Token Usage & Cost Settle
+      // Record Token Usage & Cost Settle
       const usage = aiBody.usage || {};
       tokensIn = usage.input_tokens || 0;
       tokensOut = usage.output_tokens || 0;
@@ -214,7 +212,7 @@ serve(async (req) => {
       cacheCreateTokens = usage.cache_creation_input_tokens || 0;
       costUsd = calculateHaikuCostUsd(usage);
 
-      await supabase.rpc("settle_ai_feature_usage", {
+      const { data: settleSuccess, error: settleError } = await supabase.rpc("settle_ai_feature_usage", {
         p_request_id: currentRequestId,
         p_status: "completed",
         p_input_tokens: tokensIn,
@@ -223,13 +221,22 @@ serve(async (req) => {
         p_cache_create_tokens: cacheCreateTokens,
         p_cost_usd: costUsd,
       });
+
+      if (settleError || settleSuccess === false) {
+        console.error(JSON.stringify({ requestId: currentRequestId, operation: "settle-completed", error: settleError?.message || "settlement returned false" }));
+        throw new ApiError(500, "SETTLEMENT_FAILED", "Failed to finalize usage settlement.");
+      }
+
       requestSettled = true;
     } finally {
       if (!requestSettled) {
-        await supabase.rpc("settle_ai_feature_usage", {
+        const { error: failedSettleErr } = await supabase.rpc("settle_ai_feature_usage", {
           p_request_id: currentRequestId,
           p_status: "failed",
         });
+        if (failedSettleErr) {
+          console.error(JSON.stringify({ requestId: currentRequestId, operation: "settle-failed-cleanup", error: failedSettleErr.message }));
+        }
       }
     }
 
