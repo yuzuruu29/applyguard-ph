@@ -11,6 +11,9 @@ export default defineConfig({
     // The unit-tested modules (scoring, redflags, missing) are pure logic,
     // so a plain node environment is all we need.
     environment: "node",
-    include: ["src/**/*.{test,spec}.{js,jsx}"],
+    include: [
+      "src/**/*.{test,spec}.{js,jsx}",
+      "supabase/functions/_shared/**/*.{test,spec}.ts",
+    ],
   },
 });

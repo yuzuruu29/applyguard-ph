@@ -6,6 +6,7 @@ import { useApp } from "../store.jsx";
 
 const NAV = [
   { to: "/", label: "Scan", end: true },
+  { to: "/background-check", label: "Check Link" },
   { to: "/tracker", label: "Tracker" },
   { to: "/settings", label: "Settings" },
   { to: "/offers", label: "Offers" },
@@ -49,14 +50,16 @@ export default function Layout() {
   return (
     <div className="flex min-h-screen flex-col">
       <RouteScrollReset />
-      <header className="sticky top-0 z-40 border-b border-line bg-paper/85 backdrop-blur">
+      <header className="sticky top-0 z-40 border-b border-line/70 bg-paper/90 shadow-sm shadow-ink/[0.03] backdrop-blur-md">
         <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-3 px-4 py-3">
           <Link
             to="/"
-            className="flex min-h-11 items-center gap-2"
+            className="group flex min-h-11 items-center gap-2"
             aria-label="ApplyGuard PH home"
           >
-            <ShieldMark />
+            <span className="transition-transform duration-300 group-hover:scale-110 group-hover:-rotate-3">
+              <ShieldMark />
+            </span>
             <span className="font-display text-xl font-semibold leading-none text-ink">
               ApplyGuard
               <span className="ml-1 rounded-md bg-brand px-1.5 py-0.5 align-middle font-sans text-xs font-bold tracking-wide text-paper">
@@ -106,17 +109,49 @@ export default function Layout() {
       </main>
 
       <footer className="border-t border-line bg-panel/60">
-        <div className="mx-auto max-w-5xl px-4 py-8 text-sm text-ink-soft">
-          <p className="font-display text-lg text-ink">Free. No sign-up. No subscription.</p>
-          <p className="mt-2 max-w-xl">
-            ApplyGuard PH isn't affiliated with any job board or employer. It gives you a
-            second opinion. Always verify a company yourself before you hand over personal
-            details or money.
-          </p>
-          <p className="mt-4 text-xs text-ink-faint">
-            Built for Filipino remote job seekers. The scanner runs in your browser — with an optional
-            account, your saved jobs sync across devices (still your data, in your private rows).
-          </p>
+        <div className="mx-auto max-w-5xl px-4 py-10">
+          <div className="grid gap-8 sm:grid-cols-[1fr_auto]">
+            <div>
+              <div className="flex items-center gap-2">
+                <ShieldMark />
+                <span className="font-display text-lg font-semibold text-ink">
+                  ApplyGuard
+                  <span className="ml-1 rounded-md bg-brand px-1.5 py-0.5 align-middle font-sans text-[0.65rem] font-bold tracking-wide text-paper">PH</span>
+                </span>
+              </div>
+              <p className="mt-3 max-w-md text-sm leading-relaxed text-ink-soft">
+                A free second opinion on remote job posts. Check for scam signals, pay fit, and
+                missing details before you invest your time.
+              </p>
+              <p className="mt-3 text-xs text-ink-faint">
+                Not affiliated with any job board or employer. Always verify a company yourself
+                before handing over personal details or money.
+              </p>
+            </div>
+            <div className="flex gap-12 text-sm">
+              <div>
+                <p className="mb-2 font-semibold text-ink">Tool</p>
+                <ul className="space-y-1.5 text-ink-soft">
+                  <li><Link to="/" className="transition-colors hover:text-brand">Scan a job</Link></li>
+                  <li><Link to="/background-check" className="transition-colors hover:text-brand">Background check</Link></li>
+                  <li><Link to="/tracker" className="transition-colors hover:text-brand">Job tracker</Link></li>
+                  <li><Link to="/offers" className="transition-colors hover:text-brand">Offers</Link></li>
+                  <li><Link to="/mock-interview" className="transition-colors hover:text-brand">Mock interview</Link></li>
+                </ul>
+              </div>
+              <div>
+                <p className="mb-2 font-semibold text-ink">Account</p>
+                <ul className="space-y-1.5 text-ink-soft">
+                  <li><Link to="/account" className="transition-colors hover:text-brand">My account</Link></li>
+                  <li><Link to="/settings" className="transition-colors hover:text-brand">Settings</Link></li>
+                </ul>
+              </div>
+            </div>
+          </div>
+          <div className="mt-8 flex flex-wrap items-center justify-between gap-3 border-t border-line pt-5 text-xs text-ink-faint">
+            <p>Built for Filipino remote job seekers. The scanner runs in your browser.</p>
+            <p>© {new Date().getFullYear()} ApplyGuard PH</p>
+          </div>
         </div>
       </footer>
 

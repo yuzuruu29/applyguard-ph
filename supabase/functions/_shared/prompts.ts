@@ -2,7 +2,7 @@
 // The job post is always fenced so the model treats it as data, never
 // as instructions (prompt-injection guard).
 
-type Feature = "message" | "deepscan" | "resume" | "interview" | "interview_voice";
+type Feature = "message" | "deepscan" | "resume" | "interview" | "interview_voice" | "backgroundcheck";
 
 interface PromptInput {
   rawText: string;
@@ -134,5 +134,44 @@ export const FEATURES: Record<Feature, { system: string; maxTokens: number; buil
       "4. Do NOT use markdown formatting, emojis, or lists, as your text will be read aloud by a text-to-speech engine. Spell out numbers or symbols if necessary.\n" +
       "5. Conclude the interview after 4 to 5 questions.",
     build: (input) => "", // unused for voice interview, we pass messages array directly
+  },
+
+  backgroundcheck: {
+    maxTokens: 1000,
+    system:
+      "You are a company credibility analyst helping Filipino remote job seekers verify whether a company or job-posting website is legitimate. " +
+      "Analyze the provided URL and any context the user gives (company name, what the site claims). " +
+      "Be specific and actionable. Never guarantee a company is safe — always recommend independent verification. " +
+      "If you cannot determine legitimacy, say so clearly and explain what the user should check manually.",
+    build: (input) => {
+      const extra = input.extra || {};
+      const url = (extra.url as string) || "";
+      const companyName = (extra.companyName as string) || "";
+      const context = (extra.context as string) || "";
+      return [
+        "Perform a credibility and legitimacy check on the following company/link for a Filipino remote job seeker.",
+        "",
+        `URL to check: ${url}`,
+        companyName ? `Company name: ${companyName}` : "",
+        context ? `Additional context from the user:\n${fence(context)}` : "",
+        "",
+        "Structure your analysis in these sections:",
+        "",
+        "## Credibility Assessment",
+        "Rate the overall credibility: High / Medium / Low / Cannot Determine. Explain why in 2-3 sentences.",
+        "",
+        "## Positive Signals",
+        "List any indicators of legitimacy (professional domain, known platform, consistent branding, verifiable address, etc.).",
+        "",
+        "## Warning Signs",
+        "List any red flags (new domain, mismatched branding, unrealistic promises, no verifiable contact, payment requests, etc.).",
+        "",
+        "## Verification Steps",
+        "Give 3-5 concrete steps the job seeker should take to verify this company independently (e.g., check SEC/DTI registration, search for employee reviews, verify the domain's WHOIS record, look for the company on LinkedIn, etc.).",
+        "",
+        "## Bottom Line",
+        "One clear sentence: should they proceed with caution, investigate further, or avoid this entirely?",
+      ].filter(Boolean).join("\n");
+    },
   },
 };

@@ -18,7 +18,7 @@ never let a lead go cold. Share verdict summaries directly from the result page.
 - **React Router 7** (client-side routing)
 - **Vitest** for unit tests
 - **Supabase** (optional accounts: magic-link auth, Postgres + RLS cloud sync, Deno edge functions)
-- **PayMongo** (Premium subscriptions: card/Maya recurring; GCash 30-day manual renewal)
+- **PayPal Checkout** (live one-time payments for 30-day, 365-day, and Message Pack access)
 - **Anthropic** (Premium AI features, called from a server-side proxy — keys never ship to the browser)
 - The free scanner still needs **no backend, no account, no paid APIs**. Persistence is localStorage.
 
@@ -111,11 +111,15 @@ which makes them easy to test:
 
 ## Monetization
 
-The scanner is free and never gated. **Premium** (₱299/mo or ₱2,990/yr, card/Maya auto-renew;
-₱299 per 30 days via GCash manual renewal) adds four AI features on the result page:
-application message generator, deep scam analysis, resume tailoring, and interview prep —
-60 AI uses per month. The Message Pack (₱149 one-time) is also available. Entitlements are
-written ONLY by the signature-verified PayMongo webhook; the browser can never self-upgrade.
+The scanner is free and never gated. **Premium** is sold through live PayPal Checkout as
+30 days for ₱299 or 365 days for ₱2,990. These are honest one-time payments rather than
+automatic renewals. Premium adds application messages, deep scam analysis, resume tailoring,
+and interview practice, with 60 AI uses per month. The ₱149 Message Pack is delivered as an
+authenticated PDF download from the Account page.
+
+Plan, amount, currency, capture status, and account ownership are verified server-side.
+Fulfillment is an atomic, idempotent database operation and is reconciled by a
+signature-verified PayPal webhook; browser metadata can never self-upgrade an account.
 
 ## Privacy
 
@@ -131,12 +135,13 @@ The app runs fully local-only without this. To enable accounts/subscriptions/AI:
 
 1. Create `.env.local` from `.env.example` with your Supabase URL + anon key.
 2. `npx supabase link --project-ref <ref>` then `npx supabase db push`.
-3. `npx supabase functions deploy` and set secrets (`PAYMONGO_SECRET_KEY`,
-   `PAYMONGO_WEBHOOK_SECRET`, `PAYMONGO_PLAN_MONTHLY_ID`, `PAYMONGO_PLAN_YEARLY_ID`,
-   `ANTHROPIC_API_KEY`, `APP_ORIGIN`).
-4. Register the PayMongo webhook to `<supabase-url>/functions/v1/paymongo-webhook`.
+3. `npx supabase db push --linked` and `npx supabase functions deploy`.
+4. Set Edge Function secrets: `PAYPAL_CLIENT_ID`, `PAYPAL_CLIENT_SECRET`,
+   `PAYPAL_ENVIRONMENT=production`, `PAYPAL_WEBHOOK_ID`, `ANTHROPIC_API_KEY`,
+   `ANTHROPIC_MODEL`, and `APP_ORIGIN`.
+5. Register the live PayPal webhook URL at
+   `<supabase-url>/functions/v1/paypal-webhook` for `PAYMENT.CAPTURE.COMPLETED`.
 5. Set the same `VITE_*` vars in Netlify → Site settings → Environment.
 
 Full step-by-step: `docs/superpowers/plans/monetization/`.
-
 

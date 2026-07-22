@@ -2,6 +2,8 @@ import { useState, useRef } from "react";
 import { useLocation, Link } from "react-router-dom";
 import { useAuth } from "../auth.jsx";
 import { useApp } from "../store.jsx";
+import { downloadMessagePack } from "../lib/billing.js";
+import { trialState } from "../lib/entitlement.js";
 
 export default function AccountPage() {
   const { user, loading, backendEnabled, signInWithEmail, signOut, entitlement, tier, usageCount, aiCap, refreshEntitlement } = useAuth();
@@ -12,7 +14,10 @@ export default function AccountPage() {
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
   const [error, setError] = useState("");
+  const [downloadingPack, setDownloadingPack] = useState(false);
   const inputRef = useRef(null);
+
+  const tState = trialState(entitlement);
 
   const handleSendLink = async (e) => {
     e.preventDefault();
@@ -38,6 +43,18 @@ export default function AccountPage() {
       await signOut();
     } catch {
       // Silently fail — the user is still signed out locally.
+    }
+  };
+
+  const handleDownloadPack = async () => {
+    setDownloadingPack(true);
+    try {
+      await downloadMessagePack();
+      notify("Message Pack download started.", "success");
+    } catch (err) {
+      notify(err?.message || "Couldn't download the Message Pack. Try again.", "error");
+    } finally {
+      setDownloadingPack(false);
     }
   };
 
@@ -74,7 +91,7 @@ export default function AccountPage() {
         <div>
           <h1 className="font-display text-3xl text-ink">Account</h1>
           <p className="mt-1 text-ink-soft">
-            Sign in to sync your tracker across devices and unlock Premium AI features.
+            Sign in to sync your tracker across devices and unlock Pro AI features.
           </p>
         </div>
 
@@ -132,7 +149,6 @@ export default function AccountPage() {
     );
   }
 
-
   // ── Signed in ───────────────────────────────────────────────────────
   return (
     <div className="space-y-7">
@@ -143,70 +159,112 @@ export default function AccountPage() {
         </p>
       </div>
 
-      {/* Subscription status */}
+      {/* Pro access & Trial status */}
       <section className="elev space-y-4 rounded-3xl border border-line bg-card p-6 sm:p-8">
-        <h2 className="font-display text-xl text-ink">Subscription</h2>
+        <h2 className="font-display text-xl text-ink">Subscription & Pro Access</h2>
+        
         {tier === "premium" ? (
-          <>
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <span className="rounded-full bg-go-soft px-3 py-1 text-xs font-semibold text-go-ink">Pro Active</span>
+              {entitlement?.trial_status === "converted" && (
+                <span className="text-xs text-ink-faint">(Converted from Trial)</span>
+              )}
+            </div>
             <p className="text-sm text-ink-soft">
-              Plan: <span className="font-semibold text-ink">Premium</span>.
-              Status: <span className="font-semibold text-ink">{entitlement?.status || "active"}</span>.
-              Paid through <span className="font-mono text-ink">{entitlement?.current_period_end || "—"}</span>.
+              Paid through <span className="font-mono text-ink font-semibold">{entitlement?.current_period_end || "—"}</span>.
             </p>
             <p className="text-sm text-ink-soft">
-              AI uses this month: <span className="font-mono text-ink">{usageCount} / {aiCap}</span>
+              AI calls this month: <span className="font-mono text-ink font-semibold">{usageCount} / {aiCap}</span>
             </p>
-            <div className="pt-4 mt-4 border-t border-line">
-              <h3 className="font-display text-lg text-ink mb-2">Voice Mock Interview</h3>
-              <p className="text-sm text-ink-soft mb-3">Practice live voice interviews with our AI hiring manager.</p>
+          </div>
+        ) : tState.isTrialActive ? (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <span className="rounded-full bg-brand/10 px-3 py-1 text-xs font-semibold text-brand">Pro Preview Active</span>
+                <p className="mt-2 text-sm font-medium text-ink">
+                  Expires {tState.expiresAt ? tState.expiresAt.toLocaleDateString() : "in 7 days"} ({tState.daysRemaining} day{tState.daysRemaining !== 1 ? "s" : ""} remaining)
+                </p>
+              </div>
               <Link
-                to="/mock-interview"
-                className="inline-block rounded-full bg-brand px-6 py-2.5 font-semibold text-paper transition-all duration-200 hover:-translate-y-0.5 hover:bg-brand-deep"
+                to="/offers"
+                className="rounded-full bg-brand px-5 py-2 text-sm font-semibold text-paper hover:bg-brand-deep transition-all"
               >
-                Start Interview
+                Upgrade to Pro (₱299)
               </Link>
             </div>
-          </>
+
+            <div className="rounded-2xl border border-line bg-paper p-4 space-y-3">
+              <p className="text-xs font-semibold uppercase tracking-wider text-ink-faint">Remaining Trial Allowances</p>
+              <div className="grid grid-cols-2 gap-3 text-sm">
+                <div className="flex justify-between border-b border-line pb-1.5">
+                  <span className="text-ink-soft">Deep Scans</span>
+                  <span className="font-mono font-medium text-ink">3 max</span>
+                </div>
+                <div className="flex justify-between border-b border-line pb-1.5">
+                  <span className="text-ink-soft">Resume Tailoring</span>
+                  <span className="font-mono font-medium text-ink">2 max</span>
+                </div>
+                <div className="flex justify-between border-b border-line pb-1.5">
+                  <span className="text-ink-soft">Outreach Messages</span>
+                  <span className="font-mono font-medium text-ink">5 max</span>
+                </div>
+                <div className="flex justify-between border-b border-line pb-1.5">
+                  <span className="text-ink-soft">Mock Interviews</span>
+                  <span className="font-mono font-medium text-ink">1 max</span>
+                </div>
+              </div>
+            </div>
+
+            <p className="text-xs text-ink-faint">
+              No automatic charge when trial ends. Card details are never requested during trial.
+            </p>
+          </div>
         ) : (
-          <>
-            <p className="text-sm text-ink-soft">You're on the free tier. Premium adds four AI features.</p>
+          <div className="space-y-4">
+            <p className="text-sm text-ink-soft">
+              {tState.isExpired
+                ? "Your 7-day Pro Preview has expired. Upgrade to 30-Day Pro to keep using AI features."
+                : "You are currently on the free tier. Try Pro free for 7 days or upgrade."}
+            </p>
             <Link
               to="/offers"
               className="inline-block rounded-full bg-brand px-6 py-3 font-semibold text-paper transition-all duration-200 hover:-translate-y-0.5 hover:bg-brand-deep"
             >
-              See Premium
+              {tState.isExpired ? "Upgrade to Pro (₱299)" : "View Pro Plans"}
             </Link>
-          </>
+          </div>
         )}
       </section>
 
-      {/* Purchased items */}
+      {/* Purchased items / Message Pack */}
       {entitlement?.has_message_pack && (
         <section className="elev space-y-4 rounded-3xl border border-line bg-card p-6 sm:p-8">
           <h2 className="font-display text-xl text-ink">Purchased Items</h2>
           <div className="rounded-2xl border border-line bg-paper p-4 flex items-center justify-between">
             <div>
               <p className="font-semibold text-ink">Message Pack</p>
-              <p className="text-sm text-ink-soft">20 message templates</p>
+              <p className="text-sm text-ink-soft">20 application & follow-up templates</p>
             </div>
-            <a
-              href="/MessagePack.pdf"
-              target="_blank"
-              download
+            <button
+              type="button"
+              onClick={handleDownloadPack}
+              disabled={downloadingPack}
               className="rounded-full bg-brand/10 px-4 py-2 text-sm font-semibold text-brand transition-colors hover:bg-brand/20"
             >
-              Download PDF
-            </a>
+              {downloadingPack ? "Preparing…" : "Download PDF"}
+            </button>
           </div>
         </section>
       )}
 
-      {/* Sync status */}
+      {/* Cloud sync */}
       <section className="elev space-y-4 rounded-3xl border border-line bg-card p-6 sm:p-8">
         <h2 className="font-display text-xl text-ink">Cloud sync</h2>
         <p className="text-sm text-ink-soft">
           Your tracker has {jobs.length} job{jobs.length !== 1 ? "s" : ""}. Settings and jobs sync
-          automatically across your signed-in devices. The scanner itself still runs in your browser.
+          automatically across your signed-in devices.
         </p>
       </section>
 
@@ -219,17 +277,15 @@ export default function AccountPage() {
         >
           Sign out
         </button>
-        <p className="mt-2 text-xs text-ink-faint">
-          Signing out keeps your data in this browser. Cloud sync pauses until you sign in again.
-        </p>
       </section>
 
-      {/* Privacy note */}
-      <p className="text-xs text-ink-faint">
-        Your settings and saved jobs are stored in private cloud rows that only you can access. The
-        scanner itself runs in your browser. Premium AI features send the job post text to our AI
-        provider for processing; it's processed in memory and never stored.
-      </p>
+      {/* Privacy & Legal links */}
+      <div className="flex flex-wrap gap-4 text-xs text-ink-faint pt-2">
+        <Link to="/privacy" className="hover:text-brand underline">Privacy Policy</Link>
+        <Link to="/terms" className="hover:text-brand underline">Terms of Service</Link>
+        <Link to="/refunds" className="hover:text-brand underline">Refund Policy</Link>
+        <Link to="/disclaimer" className="hover:text-brand underline">AI Disclaimer</Link>
+      </div>
     </div>
   );
 }

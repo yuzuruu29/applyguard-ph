@@ -1,52 +1,109 @@
-// billing.js — browser-side billing helpers. Calls Supabase edge functions
-// with the user's JWT. The functions handle PayMongo communication; this
-// module just forwards the requests.
+// Browser-side PayPal helpers. Plan prices and fulfillment remain server-owned;
+// the browser only requests an order ID and asks the server to reconcile it.
 
 import { supabase } from "./supabase.js";
 
-/** Create a PayPal order. Returns the order ID. */
-export async function createPayPalOrder(planId, metadata = null) {
-  if (!supabase) throw new Error("Backend not configured");
-  const { data: { session } } = await supabase.auth.getSession();
-  if (!session) throw new Error("Sign in first");
+export class BillingError extends Error {
+  constructor(message, { code = "BILLING_ERROR", status = 0, retryable = false, requestId = null } = {}) {
+    super(message);
+    this.name = "BillingError";
+    this.code = code;
+    this.status = status;
+    this.retryable = retryable;
+    this.requestId = requestId;
+  }
+}
 
-  const bodyData = { plan: planId };
-  if (metadata) bodyData.metadata = metadata;
+const wait = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds));
 
-  const res = await fetch(
-    `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-paypal-order`,
+async function accessToken() {
+  if (!supabase) throw new BillingError("Payments are not configured.", { code: "BACKEND_NOT_CONFIGURED" });
+  const { data: { session }, error } = await supabase.auth.getSession();
+  if (error || !session) throw new BillingError("Sign in before starting checkout.", { code: "AUTH_REQUIRED", status: 401 });
+  return session.access_token;
+}
+
+function billingError(body, status) {
+  const error = body?.error;
+  return new BillingError(
+    typeof error === "string" ? error : error?.message || "PayPal could not complete this request.",
     {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${session.access_token}`,
-      },
-      body: JSON.stringify(bodyData),
-    }
+      code: error?.code || "PAYPAL_REQUEST_FAILED",
+      status,
+      retryable: Boolean(error?.retryable) || status >= 500,
+      requestId: body?.requestId || null,
+    },
   );
-  const body = await res.json();
-  if (!res.ok) throw new Error(body?.error || "PayPal order creation failed");
+}
+
+async function requestJson(path, { method = "POST", body, idempotencyKey, retries = 2 } = {}) {
+  const token = await accessToken();
+  let lastError;
+
+  for (let attempt = 0; attempt <= retries; attempt += 1) {
+    try {
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/${path}`, {
+        method,
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+          ...(idempotencyKey ? { "X-Idempotency-Key": idempotencyKey } : {}),
+        },
+        body: body === undefined ? undefined : JSON.stringify(body),
+      });
+      const responseBody = await response.json().catch(() => ({}));
+      if (response.ok) return { body: responseBody, status: response.status };
+
+      const error = billingError(responseBody, response.status);
+      if (!error.retryable || attempt === retries) throw error;
+      lastError = error;
+    } catch (error) {
+      const normalized = error instanceof BillingError
+        ? error
+        : new BillingError("The payment connection was interrupted. Retrying…", { code: "NETWORK_ERROR", retryable: true });
+      if (!normalized.retryable || attempt === retries) throw normalized;
+      lastError = normalized;
+    }
+    await wait(350 * (attempt + 1));
+  }
+
+  throw lastError || new BillingError("PayPal could not complete this request.");
+}
+
+export async function createPayPalOrder(planId) {
+  const idempotencyKey = crypto.randomUUID();
+  const { body } = await requestJson("create-paypal-order", {
+    body: { plan: planId },
+    idempotencyKey,
+  });
+  if (typeof body.id !== "string") throw new BillingError("PayPal did not return an order ID.", { code: "ORDER_ID_MISSING" });
   return body.id;
 }
 
-/** Capture a PayPal order. Returns success. */
 export async function capturePayPalOrder(orderID) {
-  if (!supabase) throw new Error("Backend not configured");
-  const { data: { session } } = await supabase.auth.getSession();
-  if (!session) throw new Error("Sign in first");
+  const { body } = await requestJson("capture-paypal-order", { body: { orderID }, retries: 3 });
+  return body;
+}
 
-  const res = await fetch(
-    `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/capture-paypal-order`,
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${session.access_token}`,
-      },
-      body: JSON.stringify({ orderID }),
-    }
-  );
-  const body = await res.json();
-  if (!res.ok) throw new Error(body?.error || "PayPal capture failed");
-  return body.success;
+export async function downloadMessagePack() {
+  const token = await accessToken();
+  const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/download-message-pack`, {
+    method: "GET",
+    headers: { Authorization: `Bearer ${token}` },
+  });
+
+  if (!response.ok) {
+    const body = await response.json().catch(() => ({}));
+    throw billingError(body, response.status);
+  }
+
+  const blob = await response.blob();
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = "ApplyGuard-PH-Message-Pack.pdf";
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  URL.revokeObjectURL(url);
 }

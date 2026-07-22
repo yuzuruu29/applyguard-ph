@@ -28,13 +28,14 @@ export const PLANS = {
     periodDisplay: "one time",
     amount: 14900,
     kind: "one_time",
-    blurb: "20 message templates: cold applications, follow-ups, rate talk. Delivered to your email.",
+    blurb: "20 adaptable templates for applications, follow-ups, and rate talk. Instant protected PDF download.",
   },
 };
 
 export const AI_FEATURES = [
   { id: "message", name: "AI message generator" },
   { id: "deepscan", name: "AI deep scam analysis" },
+  { id: "backgroundcheck", name: "AI background check" },
   { id: "resume", name: "Resume tailoring" },
   { id: "interview", name: "Interview prep" },
 ];

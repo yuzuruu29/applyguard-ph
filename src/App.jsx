@@ -10,6 +10,8 @@ import OffersPage from "./components/OffersPage.jsx";
 import AccountPage from "./components/AccountPage.jsx";
 
 import MockInterviewPage from "./components/MockInterviewPage.jsx";
+import BackgroundCheckPage from "./components/BackgroundCheckPage.jsx";
+import { PrivacyPage, TermsPage, RefundPage, DisclaimerPage } from "./components/TrustSurfaces.jsx";
 
 function NotFound() {
   return (
@@ -39,6 +41,11 @@ export default function App() {
             <Route path="/offers" element={<OffersPage />} />
             <Route path="/account" element={<AccountPage />} />
             <Route path="/mock-interview" element={<MockInterviewPage />} />
+            <Route path="/background-check" element={<BackgroundCheckPage />} />
+            <Route path="/privacy" element={<PrivacyPage />} />
+            <Route path="/terms" element={<TermsPage />} />
+            <Route path="/refunds" element={<RefundPage />} />
+            <Route path="/disclaimer" element={<DisclaimerPage />} />
             <Route path="*" element={<NotFound />} />
           </Route>
         </Routes>

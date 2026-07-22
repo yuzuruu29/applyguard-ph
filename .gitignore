@@ -12,11 +12,9 @@ yarn-error.log*
 .vercel
 
 # Supabase local config (gitignored — use .env.example as template)
-.env
-.env.local
-.env.*.local
+.env*
+!.env.example
 supabase-go.exe
 supabase.exe
 supabase_cli.zip
-.env.vercel
 supabase/.temp/

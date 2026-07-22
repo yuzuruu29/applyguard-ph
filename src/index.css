@@ -59,6 +59,12 @@ body {
   text-rendering: optimizeLegibility;
 }
 
+/* selection color on-brand */
+::selection {
+  background-color: rgb(11 110 95 / 0.15);
+  color: var(--color-ink);
+}
+
 /* visible, on-brand focus ring for keyboard users */
 :focus-visible {
   outline: 2px solid var(--color-brand);
@@ -66,6 +72,15 @@ body {
   border-radius: 4px;
   box-shadow: 0 0 0 4px rgb(11 110 95 / 0.18);
 }
+
+/* smooth scrollbar for webkit */
+::-webkit-scrollbar { width: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: var(--color-line);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover { background: var(--color-ink-faint); }
 
 /* ── small reusable bits the utility classes can't express cleanly ── */
 
@@ -108,6 +123,16 @@ body {
   animation: ag-rise 0.5s cubic-bezier(0.2, 0.7, 0.2, 1) both;
 }
 
+/* premium scale-in: elements bloom from slightly smaller with a soft overshoot */
+@keyframes ag-scale-in {
+  0% { opacity: 0; transform: scale(0.92) translateY(10px); }
+  60% { opacity: 1; transform: scale(1.015) translateY(-2px); }
+  100% { opacity: 1; transform: scale(1) translateY(0); }
+}
+.scale-in {
+  animation: ag-scale-in 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
 /* small settle for pills / secondary bits */
 @keyframes ag-settle {
   from { opacity: 0; transform: translateY(4px) scale(0.96); }
@@ -115,6 +140,147 @@ body {
 }
 .settle {
   animation: ag-settle 0.45s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+/* ── premium ambient motion ─────────────────────────────────────────── */
+
+/* slow floating drift for decorative orbs */
+@keyframes ag-float {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  25% { transform: translate(6px, -10px) scale(1.03); }
+  50% { transform: translate(-4px, -18px) scale(1.01); }
+  75% { transform: translate(8px, -8px) scale(1.04); }
+}
+.float-slow {
+  animation: ag-float 9s ease-in-out infinite;
+}
+.float-slower {
+  animation: ag-float 13s ease-in-out infinite;
+  animation-delay: -4s;
+}
+.float-gentle {
+  animation: ag-float 11s ease-in-out infinite;
+  animation-delay: -7s;
+}
+
+/* gentle bob for the verdict preview card */
+@keyframes ag-bob {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  33% { transform: translateY(-6px) rotate(0.4deg); }
+  66% { transform: translateY(-3px) rotate(-0.3deg); }
+}
+.bob {
+  animation: ag-bob 6s ease-in-out infinite;
+}
+
+/* shimmer gloss sweep — the "glassy" light pass on buttons/cards */
+@keyframes ag-shimmer {
+  0% { transform: translateX(-150%) skewX(-15deg); }
+  100% { transform: translateX(250%) skewX(-15deg); }
+}
+.shimmer {
+  position: relative;
+  overflow: hidden;
+}
+.shimmer::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 40%;
+  background: linear-gradient(
+    105deg,
+    transparent 0%,
+    rgb(255 255 255 / 0.25) 45%,
+    rgb(255 255 255 / 0.4) 50%,
+    rgb(255 255 255 / 0.25) 55%,
+    transparent 100%
+  );
+  animation: ag-shimmer 3.2s ease-in-out infinite;
+  animation-delay: 1.5s;
+  pointer-events: none;
+}
+
+/* soft glow pulse for attention-drawing elements */
+@keyframes ag-glow {
+  0%, 100% { box-shadow: 0 0 0 0 rgb(11 110 95 / 0); }
+  50% { box-shadow: 0 0 20px 4px rgb(11 110 95 / 0.12); }
+}
+.glow-pulse {
+  animation: ag-glow 3s ease-in-out infinite;
+}
+
+/* animated gradient border — rotating conic gradient behind a card */
+@keyframes ag-gradient-spin {
+  to { transform: rotate(360deg); }
+}
+.gradient-border {
+  position: relative;
+}
+.gradient-border::before {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  padding: 1px;
+  background: conic-gradient(
+    from var(--ag-angle, 0deg),
+    var(--color-brand) 0%,
+    var(--color-marker) 25%,
+    var(--color-brand) 50%,
+    transparent 65%,
+    var(--color-brand) 100%
+  );
+  -webkit-mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  animation: ag-gradient-spin 6s linear infinite;
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+/* scroll-reveal: hidden until .revealed is added by IntersectionObserver */
+.scroll-reveal {
+  opacity: 0;
+  transform: translateY(24px) scale(0.97);
+  transition:
+    opacity 0.7s cubic-bezier(0.2, 0.7, 0.2, 1),
+    transform 0.7s cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+.scroll-reveal.revealed {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+/* stagger children when parent is revealed */
+.scroll-reveal-stagger > * {
+  opacity: 0;
+  transform: translateY(18px);
+  transition:
+    opacity 0.55s cubic-bezier(0.2, 0.7, 0.2, 1),
+    transform 0.55s cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+.scroll-reveal-stagger.revealed > *:nth-child(1) { transition-delay: 0s; }
+.scroll-reveal-stagger.revealed > *:nth-child(2) { transition-delay: 0.1s; }
+.scroll-reveal-stagger.revealed > *:nth-child(3) { transition-delay: 0.2s; }
+.scroll-reveal-stagger.revealed > *:nth-child(4) { transition-delay: 0.3s; }
+.scroll-reveal-stagger.revealed > *:nth-child(5) { transition-delay: 0.4s; }
+.scroll-reveal-stagger.revealed > * {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* springy hover for interactive cards */
+.spring-hover {
+  transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.3s ease;
+}
+.spring-hover:hover {
+  transform: translateY(-4px) scale(1.01);
+}
+.spring-hover:active {
+  transform: translateY(-1px) scale(0.99);
+  transition-duration: 0.1s;
 }
 
 /* the verdict stamp being pressed onto the page */
@@ -167,11 +333,11 @@ body {
 
 /* lightweight per-route fade for the main area */
 @keyframes ag-page {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from { opacity: 0; transform: translateY(6px) scale(0.995); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
 }
 .page-enter {
-  animation: ag-page 0.3s ease-out both;
+  animation: ag-page 0.4s cubic-bezier(0.2, 0.7, 0.2, 1) both;
 }
 
 /* score-ring stroke fills via transition (set in the component) */
@@ -180,12 +346,13 @@ body {
 }
 
 /* staggered delays for entrance groups (kept short on purpose) */
-.d1 { animation-delay: 0.05s; }
-.d2 { animation-delay: 0.11s; }
-.d3 { animation-delay: 0.17s; }
-.d4 { animation-delay: 0.23s; }
-.d5 { animation-delay: 0.29s; }
-.d6 { animation-delay: 0.35s; }
+.d1 { animation-delay: 0.06s; }
+.d2 { animation-delay: 0.14s; }
+.d3 { animation-delay: 0.22s; }
+.d4 { animation-delay: 0.32s; }
+.d5 { animation-delay: 0.42s; }
+.d6 { animation-delay: 0.52s; }
+.d7 { animation-delay: 0.62s; }
 
 /* soft elevation for cards — a thin top highlight plus a low, wide shadow */
 .elev {
@@ -194,13 +361,17 @@ body {
     0 14px 34px -24px rgb(27 26 23 / 0.35);
 }
 .elev-hover {
-  transition: box-shadow 0.25s ease, transform 0.25s ease;
+  transition: box-shadow 0.35s cubic-bezier(0.34, 1.56, 0.64, 1), transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 .elev-hover:hover {
   box-shadow:
-    0 1px 2px rgb(27 26 23 / 0.05),
-    0 18px 40px -22px rgb(27 26 23 / 0.4);
-  transform: translateY(-2px);
+    0 2px 4px rgb(27 26 23 / 0.06),
+    0 22px 48px -20px rgb(27 26 23 / 0.42);
+  transform: translateY(-4px) scale(1.008);
+}
+.elev-hover:active {
+  transform: translateY(-1px) scale(0.995);
+  transition-duration: 0.12s;
 }
 
 /* ── paste box: the "job-post slip" ─────────────────────────────────
