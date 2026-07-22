@@ -14,9 +14,9 @@ const INPUT_LIMITS: Record<string, number> = {
   message: 10_000,
   deepscan: 15_000,
   resume: 30_000,
-  interview: 20_000,
-  interview_voice: 20_000,
-  backgroundcheck: 15_000,
+  interview: 15_000,
+  interview_voice: 12_000,
+  backgroundcheck: 5_700,
 };
 
 // Server-enforced output max_tokens per feature
@@ -46,22 +46,28 @@ type AiBody = {
 };
 
 function validateVoiceMessages(messages: unknown): messages is ConversationMessage[] {
-  return Array.isArray(messages)
-    && messages.length > 0
-    && messages.length <= MAX_VOICE_MESSAGES
-    && messages.every((message) => message
-      && (message.role === "user" || message.role === "assistant")
-      && typeof message.content === "string"
-      && message.content.length > 0
-      && message.content.length <= 4_000);
+  if (!Array.isArray(messages) || messages.length === 0 || messages.length > MAX_VOICE_MESSAGES) {
+    return false;
+  }
+  let totalChars = 0;
+  for (const message of messages) {
+    if (!message || (message.role !== "user" && message.role !== "assistant") || typeof message.content !== "string") {
+      return false;
+    }
+    const len = message.content.trim().length;
+    if (len === 0 || len > 2_000) return false;
+    totalChars += len;
+  }
+  return totalChars <= 12_000;
 }
 
 serve(async (req) => {
-  const id = requestId(req);
+  const httpTraceId = requestId(req);
   if (req.method === "OPTIONS") return optionsResponse(req);
-  if (req.method !== "POST") return errorResponse(req, new ApiError(405, "METHOD_NOT_ALLOWED", "Method not allowed."), id, "ai-proxy");
+  if (req.method !== "POST") return errorResponse(req, new ApiError(405, "METHOD_NOT_ALLOWED", "Method not allowed."), httpTraceId, "ai-proxy");
 
-  let currentRequestId = id;
+  // Always generate ledger request ID 100% server-side to prevent client ID manipulation
+  const ledgerRequestId = crypto.randomUUID();
 
   try {
     // 0. Phase 5 IP Rate Limiting
@@ -82,7 +88,7 @@ serve(async (req) => {
     const { data: { user }, error: authError } = await supabase.auth.getUser(authHeader.slice(7));
     if (authError || !user) throw new ApiError(401, "AUTH_INVALID", "Your session expired. Sign in and try again.");
 
-    // Phase 5 Verified Email check
+    // Verified Email check
     const isEmailVerified = Boolean(user.email_confirmed_at || user.confirmed_at);
     if (!isEmailVerified) {
       throw new ApiError(403, "EMAIL_UNVERIFIED", "Please verify your email address before using trial AI features.");
@@ -96,7 +102,7 @@ serve(async (req) => {
       throw new ApiError(400, "INVALID_JSON", "The AI request was invalid.");
     }
 
-    // 2. Validate feature and input size
+    // 2. Validate feature and strict input character bounds across all fields
     const feature = body.feature || "";
     if (!Object.hasOwn(FEATURES, feature)) throw new ApiError(400, "UNKNOWN_FEATURE", "Choose a valid AI feature.");
 
@@ -106,27 +112,31 @@ serve(async (req) => {
 
     if (isVoiceInterview) {
       if (!validateVoiceMessages(body.messages)) {
-        throw new ApiError(400, "INVALID_CONVERSATION", "The interview conversation was empty or too long.");
+        throw new ApiError(400, "INVALID_CONVERSATION", "The voice interview conversation exceeded 12 messages or 12,000 total characters.");
       }
     } else if (isBackgroundCheck) {
       const url = (body.extra?.url as string) || "";
+      const companyName = (body.extra?.companyName as string) || "";
+      const context = (body.extra?.context as string) || "";
       if (!url.trim()) throw new ApiError(400, "URL_REQUIRED", "Paste a URL to run a background check.");
-      if (url.length > 2048) throw new ApiError(413, "URL_TOO_LONG", "The URL is too long.");
+      if (url.length > 500) throw new ApiError(413, "URL_TOO_LONG", "The URL is too long (max 500 chars).");
+      if (companyName.length > 200) throw new ApiError(413, "NAME_TOO_LONG", "The company name is too long (max 200 chars).");
+      if (context.length > 5_000) throw new ApiError(413, "CONTEXT_TOO_LONG", "The additional context is too long (max 5,000 chars).");
     } else {
-      const rawText = body.rawText || "";
-      const resumeText = (body.extra?.resumeText as string) || "";
+      const rawText = (body.rawText || "").trim();
+      const resumeText = ((body.extra?.resumeText as string) || "").trim();
       const totalLen = rawText.length + resumeText.length;
-      if (!rawText.trim() && feature !== "resume") throw new ApiError(400, "POST_REQUIRED", "Paste a job post before using this feature.");
-      if (totalLen > maxInputLen) {
+      if (!rawText && feature !== "resume") throw new ApiError(400, "POST_REQUIRED", "Paste a job post before using this feature.");
+      if (rawText.length > 15_000 || resumeText.length > 15_000 || totalLen > maxInputLen) {
         throw new ApiError(413, "INPUT_TOO_LONG", `Input length (${totalLen} chars) exceeds maximum allowed (${maxInputLen} chars).`);
       }
     }
 
-    // 3. Call reserve_ai_feature_usage RPC
+    // 3. Call reserve_ai_feature_usage RPC with server-generated ledgerRequestId
     const { data: reservation, error: rpcError } = await supabase.rpc("reserve_ai_feature_usage", {
       p_user_id: user.id,
       p_feature: feature,
-      p_request_id: currentRequestId,
+      p_request_id: ledgerRequestId,
     });
 
     if (rpcError) {
@@ -149,7 +159,7 @@ serve(async (req) => {
     const resRecord = Array.isArray(reservation) ? reservation[0] : reservation;
     const entitlementType = resRecord?.entitlement_type || "trial";
 
-    // 4. Call Anthropic Messages API with Haiku 4.5 & Prompt Caching
+    // 4. Call Anthropic Messages API with Haiku 4.5
     const config = FEATURES[feature as keyof typeof FEATURES];
     const maxTokens = OUTPUT_MAX_TOKENS[feature] || config.maxTokens || 1000;
 
@@ -160,16 +170,16 @@ serve(async (req) => {
           content: config.build({ rawText: body.rawText || "", intake: body.intake, settings: body.settings, extra: body.extra }),
         }];
 
-    // System prompt structure with Prompt Caching
+    // System prompt structure
     const systemPromptBlocks = [
       {
         type: "text",
         text: config.system,
-        cache_control: { type: "ephemeral" }
       }
     ];
 
-    let requestSettled = false;
+    let providerSucceeded = false;
+    let finalSettled = false;
     let tokensIn = 0, tokensOut = 0, cacheReadTokens = 0, cacheCreateTokens = 0, costUsd = 0;
     let content = "";
 
@@ -181,7 +191,6 @@ serve(async (req) => {
           "Content-Type": "application/json",
           "x-api-key": ANTHROPIC_API_KEY,
           "anthropic-version": "2023-06-01",
-          "anthropic-beta": "prompt-caching-2024-07-25"
         },
         body: JSON.stringify({
           model: ANTHROPIC_MODEL,
@@ -204,7 +213,8 @@ serve(async (req) => {
         throw new ApiError(502, "AI_EMPTY_RESPONSE", "The AI provider returned an empty response. Please try again.", { retryable: true });
       }
 
-      // Record Token Usage & Cost Settle
+      // Provider call succeeded! Record token usage
+      providerSucceeded = true;
       const usage = aiBody.usage || {};
       tokensIn = usage.input_tokens || 0;
       tokensOut = usage.output_tokens || 0;
@@ -212,8 +222,24 @@ serve(async (req) => {
       cacheCreateTokens = usage.cache_creation_input_tokens || 0;
       costUsd = calculateHaikuCostUsd(usage);
 
+      // Record provider_completed state first to preserve token cost data
+      const { data: recordSuccess, error: recordErr } = await supabase.rpc("settle_ai_feature_usage", {
+        p_request_id: ledgerRequestId,
+        p_status: "provider_completed",
+        p_input_tokens: tokensIn,
+        p_output_tokens: tokensOut,
+        p_cache_read_tokens: cacheReadTokens,
+        p_cache_create_tokens: cacheCreateTokens,
+        p_cost_usd: costUsd,
+      });
+
+      if (recordErr || recordSuccess === false) {
+        console.error(JSON.stringify({ requestId: ledgerRequestId, operation: "record-provider-completed", error: recordErr?.message || "RPC returned false" }));
+      }
+
+      // Attempt final accounting settlement
       const { data: settleSuccess, error: settleError } = await supabase.rpc("settle_ai_feature_usage", {
-        p_request_id: currentRequestId,
+        p_request_id: ledgerRequestId,
         p_status: "completed",
         p_input_tokens: tokensIn,
         p_output_tokens: tokensOut,
@@ -223,19 +249,26 @@ serve(async (req) => {
       });
 
       if (settleError || settleSuccess === false) {
-        console.error(JSON.stringify({ requestId: currentRequestId, operation: "settle-completed", error: settleError?.message || "settlement returned false" }));
+        console.error(JSON.stringify({ requestId: ledgerRequestId, operation: "settle-completed", error: settleError?.message || "settlement returned false" }));
+        // Mark settlement_pending so provider cost is preserved and NOT erased as 'failed'
+        await supabase.rpc("settle_ai_feature_usage", {
+          p_request_id: ledgerRequestId,
+          p_status: "settlement_pending",
+          p_cost_usd: costUsd,
+        });
         throw new ApiError(500, "SETTLEMENT_FAILED", "Failed to finalize usage settlement.");
       }
 
-      requestSettled = true;
+      finalSettled = true;
     } finally {
-      if (!requestSettled) {
-        const { error: failedSettleErr } = await supabase.rpc("settle_ai_feature_usage", {
-          p_request_id: currentRequestId,
+      if (!providerSucceeded && !finalSettled) {
+        // Provider call failed before valid response. Release reservation cleanly.
+        const { data: failedSuccess, error: failedSettleErr } = await supabase.rpc("settle_ai_feature_usage", {
+          p_request_id: ledgerRequestId,
           p_status: "failed",
         });
-        if (failedSettleErr) {
-          console.error(JSON.stringify({ requestId: currentRequestId, operation: "settle-failed-cleanup", error: failedSettleErr.message }));
+        if (failedSettleErr || failedSuccess === false) {
+          console.error(JSON.stringify({ requestId: ledgerRequestId, operation: "settle-failed-cleanup", error: failedSettleErr?.message || "failed settlement returned false" }));
         }
       }
     }
@@ -247,9 +280,9 @@ serve(async (req) => {
       cacheReadTokens,
       costUsd,
       entitlementType,
-      requestId: currentRequestId,
+      requestId: ledgerRequestId,
     });
   } catch (error) {
-    return errorResponse(req, error, currentRequestId, "ai-proxy");
+    return errorResponse(req, error, httpTraceId, "ai-proxy");
   }
 });
