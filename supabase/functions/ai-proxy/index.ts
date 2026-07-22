@@ -7,7 +7,8 @@ import { calculateHaikuCostUsd } from "../_shared/budget.ts";
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY")!;
-const ANTHROPIC_MODEL = Deno.env.get("ANTHROPIC_MODEL") || "claude-haiku-4-5-20251001";
+// Hard-lock proxy to pinned Haiku 4.5 model to guarantee cost calculations remain accurate
+const ANTHROPIC_MODEL = "claude-haiku-4-5-20251001";
 
 // Server-enforced input character limits per feature
 const INPUT_LIMITS: Record<string, number> = {
@@ -61,12 +62,30 @@ function validateVoiceMessages(messages: unknown): messages is ConversationMessa
   return totalChars <= 12_000;
 }
 
+function validateNestedObjects(body: AiBody) {
+  if (body.intake && typeof body.intake === "object") {
+    if (JSON.stringify(body.intake).length > 2_000) {
+      throw new ApiError(413, "INTAKE_TOO_LARGE", "The applicant profile context is too large.");
+    }
+  }
+  if (body.settings && typeof body.settings === "object") {
+    if (JSON.stringify(body.settings).length > 1_000) {
+      throw new ApiError(413, "SETTINGS_TOO_LARGE", "The applicant settings context is too large.");
+    }
+  }
+  if (body.extra && typeof body.extra === "object") {
+    if (JSON.stringify(body.extra).length > 15_000) {
+      throw new ApiError(413, "EXTRA_TOO_LARGE", "The extra payload context is too large.");
+    }
+  }
+}
+
 serve(async (req) => {
   const httpTraceId = requestId(req);
   if (req.method === "OPTIONS") return optionsResponse(req);
   if (req.method !== "POST") return errorResponse(req, new ApiError(405, "METHOD_NOT_ALLOWED", "Method not allowed."), httpTraceId, "ai-proxy");
 
-  // Always generate ledger request ID 100% server-side to prevent client ID manipulation
+  // Generate ledger request ID 100% server-side to prevent client ID manipulation
   const ledgerRequestId = crypto.randomUUID();
 
   try {
@@ -101,6 +120,9 @@ serve(async (req) => {
     } catch {
       throw new ApiError(400, "INVALID_JSON", "The AI request was invalid.");
     }
+
+    // Validate nested objects (intake, settings, extra)
+    validateNestedObjects(body);
 
     // 2. Validate feature and strict input character bounds across all fields
     const feature = body.feature || "";
@@ -170,7 +192,6 @@ serve(async (req) => {
           content: config.build({ rawText: body.rawText || "", intake: body.intake, settings: body.settings, extra: body.extra }),
         }];
 
-    // System prompt structure
     const systemPromptBlocks = [
       {
         type: "text",
@@ -213,7 +234,7 @@ serve(async (req) => {
         throw new ApiError(502, "AI_EMPTY_RESPONSE", "The AI provider returned an empty response. Please try again.", { retryable: true });
       }
 
-      // Provider call succeeded! Record token usage
+      // Provider call succeeded! Record token usage & cost
       providerSucceeded = true;
       const usage = aiBody.usage || {};
       tokensIn = usage.input_tokens || 0;
@@ -222,7 +243,7 @@ serve(async (req) => {
       cacheCreateTokens = usage.cache_creation_input_tokens || 0;
       costUsd = calculateHaikuCostUsd(usage);
 
-      // Record provider_completed state first to preserve token cost data
+      // Step 1: Transition to provider_completed
       const { data: recordSuccess, error: recordErr } = await supabase.rpc("settle_ai_feature_usage", {
         p_request_id: ledgerRequestId,
         p_status: "provider_completed",
@@ -237,7 +258,7 @@ serve(async (req) => {
         console.error(JSON.stringify({ requestId: ledgerRequestId, operation: "record-provider-completed", error: recordErr?.message || "RPC returned false" }));
       }
 
-      // Attempt final accounting settlement
+      // Step 2: Attempt final accounting settlement
       const { data: settleSuccess, error: settleError } = await supabase.rpc("settle_ai_feature_usage", {
         p_request_id: ledgerRequestId,
         p_status: "completed",
@@ -250,19 +271,26 @@ serve(async (req) => {
 
       if (settleError || settleSuccess === false) {
         console.error(JSON.stringify({ requestId: ledgerRequestId, operation: "settle-completed", error: settleError?.message || "settlement returned false" }));
-        // Mark settlement_pending so provider cost is preserved and NOT erased as 'failed'
-        await supabase.rpc("settle_ai_feature_usage", {
+        
+        // Mark settlement_pending so provider cost is preserved and NOT erased
+        const { error: pendErr } = await supabase.rpc("settle_ai_feature_usage", {
           p_request_id: ledgerRequestId,
           p_status: "settlement_pending",
           p_cost_usd: costUsd,
         });
+
+        if (pendErr) {
+          console.error(JSON.stringify({ requestId: ledgerRequestId, operation: "settle-pending-fallback-failed", error: pendErr.message }));
+        }
+
         throw new ApiError(500, "SETTLEMENT_FAILED", "Failed to finalize usage settlement.");
       }
 
       finalSettled = true;
     } finally {
+      // ONLY release reservation if provider call failed BEFORE receiving a valid response.
+      // NEVER touch or release a request where providerSucceeded === true!
       if (!providerSucceeded && !finalSettled) {
-        // Provider call failed before valid response. Release reservation cleanly.
         const { data: failedSuccess, error: failedSettleErr } = await supabase.rpc("settle_ai_feature_usage", {
           p_request_id: ledgerRequestId,
           p_status: "failed",
