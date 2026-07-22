@@ -25,15 +25,12 @@ on conflict (user_id) do update set tier = 'premium', status = 'active', current
 
 do $$
 declare
-  v_rec record;
   v_ent_type text;
 begin
-  for v_rec in perform * from public.reserve_ai_feature_usage('00000000-0000-0000-0000-000000000001', 'message', 'req-null-period') loop
-    v_ent_type := v_rec.entitlement_type;
-  end loop;
+  select entitlement_type into v_ent_type
+  from public.reserve_ai_feature_usage('00000000-0000-0000-0000-000000000001', 'message', 'req-null-period');
 
   -- Since current_period_end is null, entitlement_type MUST be 'trial', not 'paid'
-  select entitlement_type into v_ent_type from public.ai_usage_ledger where request_id = 'req-null-period';
   if v_ent_type <> 'trial' then
     raise exception 'Test failed: null current_period_end granted paid tier access!';
   end if;
@@ -130,7 +127,7 @@ begin
 end $$;
 
 ------------------------------------------------------------
--- 5. Test Settlement Lifecycle and Idempotency
+-- 5. Test Settlement Lifecycle and Transition Matrix Strictness
 ------------------------------------------------------------
 insert into public.ai_usage_ledger (
   request_id, user_id, entitlement_type, feature, status, reserved_cost_usd, created_at
@@ -147,6 +144,10 @@ begin
   v_res := public.settle_ai_feature_usage('test-settle-req-1', 'provider_completed', 100, 50, 0, 0, 0.001000);
   if not v_res then raise exception 'Test failed: provider_completed settlement failed'; end if;
 
+  -- Attempting invalid 'failed' transition on provider_completed request MUST fail (returns false)
+  v_res := public.settle_ai_feature_usage('test-settle-req-1', 'failed', 0, 0, 0, 0, 0);
+  if v_res then raise exception 'Test failed: failing a provider_completed request should be rejected!'; end if;
+
   -- Final completed step
   v_res := public.settle_ai_feature_usage('test-settle-req-1', 'completed', 100, 50, 0, 0, 0.001000);
   if not v_res then raise exception 'Test failed: final completed settlement failed'; end if;
@@ -154,9 +155,13 @@ begin
   select status into v_status from public.ai_usage_ledger where request_id = 'test-settle-req-1';
   if v_status <> 'completed' then raise exception 'Test failed: final status not completed'; end if;
 
-  -- Duplicate settlement attempt should return true (idempotent guard)
+  -- Re-submitting completed state returns true (idempotent success)
   v_res := public.settle_ai_feature_usage('test-settle-req-1', 'completed', 100, 50, 0, 0, 0.001000);
   if not v_res then raise exception 'Test failed: duplicate settlement guard failed'; end if;
+
+  -- Attempting settlement_pending on completed state MUST be rejected (returns false)
+  v_res := public.settle_ai_feature_usage('test-settle-req-1', 'settlement_pending', 100, 50, 0, 0, 0.001000);
+  if v_res then raise exception 'Test failed: settlement_pending on completed state should be rejected!'; end if;
 end $$;
 
 rollback;
