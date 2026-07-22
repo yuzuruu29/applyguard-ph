@@ -33,11 +33,22 @@ jobs:
         with:
           version: latest
 
-      - name: Deploy create-checkout
-        run: supabase functions deploy create-checkout --project-ref $PROJECT_ID
+      - name: Deploy ai-proxy
+        run: supabase functions deploy ai-proxy --project-ref $PROJECT_ID
 
-      - name: Deploy paymongo-webhook
-        run: supabase functions deploy paymongo-webhook --project-ref $PROJECT_ID --no-verify-jwt
+      - name: Deploy create-paypal-order
+        run: supabase functions deploy create-paypal-order --project-ref $PROJECT_ID
 
-      - name: Deploy cancel-subscription
-        run: supabase functions deploy cancel-subscription --project-ref $PROJECT_ID
+      - name: Deploy capture-paypal-order
+        run: supabase functions deploy capture-paypal-order --project-ref $PROJECT_ID
+
+      - name: Deploy paypal-webhook
+        run: supabase functions deploy paypal-webhook --project-ref $PROJECT_ID --no-verify-jwt
+
+      - name: Deploy download-message-pack
+        run: supabase functions deploy download-message-pack --project-ref $PROJECT_ID
+
+      - name: Apply Database Migrations
+        env:
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+        run: supabase db push --password $SUPABASE_DB_PASSWORD --project-ref $PROJECT_ID

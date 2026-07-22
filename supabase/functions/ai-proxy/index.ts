@@ -122,24 +122,7 @@ serve(async (req) => {
       }
     }
 
-    // 3. Daily Budget Circuit Breaker Check (Fail-closed)
-    const todayStart = new Date().toISOString().slice(0, 10) + "T00:00:00.000Z";
-    const { data: todaySum, error: budgetError } = await supabase
-      .from("ai_usage_ledger")
-      .select("estimated_cost_usd")
-      .gte("created_at", todayStart);
-    
-    if (budgetError) {
-      console.error(JSON.stringify({ requestId: id, operation: "circuit-breaker-check", error: budgetError.message }));
-      throw new ApiError(503, "BUDGET_SERVICE_UNAVAILABLE", "AI budget checking is temporarily unavailable. Try again shortly.");
-    }
 
-    if (todaySum) {
-      const totalDailyCost = todaySum.reduce((acc, row) => acc + (Number(row.estimated_cost_usd) || 0), 0);
-      if (totalDailyCost >= DAILY_BUDGET_CIRCUIT_BREAKER) {
-        throw new ApiError(503, "CIRCUIT_BREAKER_ACTIVE", "Daily AI capacity limit reached. Please try again tomorrow.");
-      }
-    }
 
     // 4. Call reserve_ai_feature_usage RPC
     const { data: reservation, error: rpcError } = await supabase.rpc("reserve_ai_feature_usage", {
@@ -155,6 +138,12 @@ serve(async (req) => {
       }
       if (msg.includes("feature_quota_reached")) {
         throw new ApiError(429, "FEATURE_QUOTA_REACHED", "You have used all trial allowances for this feature.");
+      }
+      if (msg.includes("monthly_cap_reached")) {
+        throw new ApiError(429, "MONTHLY_CAP_REACHED", "You have used all AI requests for this month.");
+      }
+      if (msg.includes("daily_budget_reached")) {
+        throw new ApiError(503, "CIRCUIT_BREAKER_ACTIVE", "Daily AI capacity limit reached. Please try again tomorrow.");
       }
       throw new ApiError(500, "RESERVATION_FAILED", "AI entitlement could not be reserved. Try again.", { retryable: true, internal: msg });
     }
@@ -182,61 +171,67 @@ serve(async (req) => {
       }
     ];
 
-    const aiResponse = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      signal: AbortSignal.timeout(45_000),
-      headers: {
-        "Content-Type": "application/json",
-        "x-api-key": ANTHROPIC_API_KEY,
-        "anthropic-version": "2023-06-01",
-        "anthropic-beta": "prompt-caching-2024-07-25"
-      },
-      body: JSON.stringify({
-        model: ANTHROPIC_MODEL,
-        max_tokens: maxTokens,
-        system: systemPromptBlocks,
-        messages: anthropicMessages,
-      }),
-    });
+    let requestSettled = false;
+    let tokensIn = 0, tokensOut = 0, cacheReadTokens = 0, cacheCreateTokens = 0, costUsd = 0;
+    let content = "";
 
-    const aiBody = await aiResponse.json().catch(() => ({}));
-    if (!aiResponse.ok) {
+    try {
+      const aiResponse = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        signal: AbortSignal.timeout(45_000),
+        headers: {
+          "Content-Type": "application/json",
+          "x-api-key": ANTHROPIC_API_KEY,
+          "anthropic-version": "2023-06-01",
+          "anthropic-beta": "prompt-caching-2024-07-25"
+        },
+        body: JSON.stringify({
+          model: ANTHROPIC_MODEL,
+          max_tokens: maxTokens,
+          system: systemPromptBlocks,
+          messages: anthropicMessages,
+        }),
+      });
+
+      const aiBody = await aiResponse.json().catch(() => ({}));
+      if (!aiResponse.ok) {
+        throw new ApiError(502, "AI_PROVIDER_ERROR", "The AI provider could not complete this request. Please try again.", {
+          retryable: aiResponse.status >= 429,
+          internal: `status=${aiResponse.status}; type=${aiBody.error?.type || "unknown"}`,
+        });
+      }
+
+      content = aiBody.content?.[0]?.text;
+      if (typeof content !== "string" || !content) {
+        throw new ApiError(502, "AI_EMPTY_RESPONSE", "The AI provider returned an empty response. Please try again.", { retryable: true });
+      }
+
+      // 6. Record Token Usage & Cost Settle
+      const usage = aiBody.usage || {};
+      tokensIn = usage.input_tokens || 0;
+      tokensOut = usage.output_tokens || 0;
+      cacheReadTokens = usage.cache_read_input_tokens || 0;
+      cacheCreateTokens = usage.cache_creation_input_tokens || 0;
+      costUsd = calculateHaikuCostUsd(usage);
+
       await supabase.rpc("settle_ai_feature_usage", {
         p_request_id: currentRequestId,
-        p_status: "failed",
+        p_status: "completed",
+        p_input_tokens: tokensIn,
+        p_output_tokens: tokensOut,
+        p_cache_read_tokens: cacheReadTokens,
+        p_cache_create_tokens: cacheCreateTokens,
+        p_cost_usd: costUsd,
       });
-      throw new ApiError(502, "AI_PROVIDER_ERROR", "The AI provider could not complete this request. Please try again.", {
-        retryable: aiResponse.status >= 429,
-        internal: `status=${aiResponse.status}; type=${aiBody.error?.type || "unknown"}`,
-      });
+      requestSettled = true;
+    } finally {
+      if (!requestSettled) {
+        await supabase.rpc("settle_ai_feature_usage", {
+          p_request_id: currentRequestId,
+          p_status: "failed",
+        });
+      }
     }
-
-    const content = aiBody.content?.[0]?.text;
-    if (typeof content !== "string" || !content) {
-      await supabase.rpc("settle_ai_feature_usage", {
-        p_request_id: currentRequestId,
-        p_status: "failed",
-      });
-      throw new ApiError(502, "AI_EMPTY_RESPONSE", "The AI provider returned an empty response. Please try again.", { retryable: true });
-    }
-
-    // 6. Record Token Usage & Cost Settle
-    const usage = aiBody.usage || {};
-    const tokensIn = usage.input_tokens || 0;
-    const tokensOut = usage.output_tokens || 0;
-    const cacheReadTokens = usage.cache_read_input_tokens || 0;
-    const cacheCreateTokens = usage.cache_creation_input_tokens || 0;
-    const costUsd = calculateHaikuCostUsd(usage);
-
-    await supabase.rpc("settle_ai_feature_usage", {
-      p_request_id: currentRequestId,
-      p_status: "completed",
-      p_input_tokens: tokensIn,
-      p_output_tokens: tokensOut,
-      p_cache_read_tokens: cacheReadTokens,
-      p_cache_create_tokens: cacheCreateTokens,
-      p_cost_usd: costUsd,
-    });
 
     return jsonResponse(req, {
       text: content,

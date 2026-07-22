@@ -59,10 +59,10 @@ as $$
 declare
   v_ent record;
   v_ent_type text;
-  v_max_allowance integer;
   v_used_count integer;
   v_remaining integer;
   v_ledger_id uuid;
+  v_daily_spent numeric;
 begin
   select * into v_ent
     from public.entitlements
@@ -74,10 +74,31 @@ begin
     select * into v_ent from public.entitlements where user_id = p_user_id for update;
   end if;
 
+  -- 0. Atomic daily budget circuit breaker
+  select coalesce(sum(estimated_cost_usd), 0.0) into v_daily_spent
+    from public.ai_usage_ledger
+    where created_at >= date_trunc('day', now() at time zone 'UTC');
+
+  if v_daily_spent >= 10.00 then
+    raise exception using errcode = '22023', message = 'daily_budget_reached';
+  end if;
+
   -- 1. Check paid access precedence
-  if v_ent.tier = 'premium' and v_ent.status = 'active' and coalesce(v_ent.current_period_end, current_date) >= current_date then
+  if v_ent.tier = 'premium' and v_ent.status = 'active' and v_ent.current_period_end is not null and v_ent.current_period_end >= current_date then
     v_ent_type := 'paid';
-    v_remaining := 9999;
+    
+    select count(*) into v_used_count
+      from public.ai_usage_ledger
+      where user_id = p_user_id
+        and entitlement_type = 'paid'
+        and status in ('reserved', 'completed')
+        and created_at >= date_trunc('month', now() at time zone 'UTC');
+        
+    if v_used_count >= 60 then
+      raise exception using errcode = '22023', message = 'monthly_cap_reached';
+    end if;
+    
+    v_remaining := 60 - v_used_count - 1;
   else
     v_ent_type := 'trial';
 
@@ -106,14 +127,13 @@ begin
 
     -- 4. Check feature limits during trial
     case p_feature
-      when 'deep_scan' then v_max_allowance := 3;
+      when 'message' then v_max_allowance := 5;
+      when 'deepscan' then v_max_allowance := 3;
       when 'resume' then v_max_allowance := 2;
-      when 'resume_tailor' then v_max_allowance := 2;
-      when 'outreach' then v_max_allowance := 5;
+      when 'interview' then v_max_allowance := 1;
       when 'interview_voice' then v_max_allowance := 1;
-      when 'mock_interview' then v_max_allowance := 1;
       when 'backgroundcheck' then v_max_allowance := 2;
-      else v_max_allowance := 3;
+      else v_max_allowance := 2;
     end case;
 
     select count(*) into v_used_count

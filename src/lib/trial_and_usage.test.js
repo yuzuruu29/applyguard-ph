@@ -68,10 +68,11 @@ describe("Trial & Usage System Unit Tests", () => {
 
   describe("Trial Feature Quotas & Allowances", () => {
     it("defines correct feature allowances for trial period", () => {
-      expect(TRIAL_ALLOWANCES.deep_scan).toBe(3);
+      expect(TRIAL_ALLOWANCES.message).toBe(5);
+      expect(TRIAL_ALLOWANCES.deepscan).toBe(3);
       expect(TRIAL_ALLOWANCES.resume).toBe(2);
-      expect(TRIAL_ALLOWANCES.outreach).toBe(5);
-      expect(TRIAL_ALLOWANCES.mock_interview).toBe(1);
+      expect(TRIAL_ALLOWANCES.interview).toBe(1);
+      expect(TRIAL_ALLOWANCES.interview_voice).toBe(1);
       expect(TRIAL_ALLOWANCES.backgroundcheck).toBe(2);
     });
   });
