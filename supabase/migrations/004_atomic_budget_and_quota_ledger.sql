@@ -15,6 +15,11 @@ begin
   end if;
 end $$;
 
+-- Update status check constraint to include settlement_pending and provider_completed
+alter table public.ai_usage_ledger drop constraint if exists ai_usage_ledger_status_check;
+alter table public.ai_usage_ledger add constraint ai_usage_ledger_status_check
+  check (status in ('reserved', 'provider_completed', 'completed', 'released', 'failed', 'settlement_pending'));
+
 ------------------------------------------------------------
 -- 2. Create daily_ai_budget table for atomic daily cost tracking
 ------------------------------------------------------------
@@ -30,6 +35,7 @@ revoke all on public.daily_ai_budget from public, anon, authenticated;
 
 ------------------------------------------------------------
 -- 3. Function to release stale reservations older than 5 minutes
+-- NOTE: Only releases 'reserved' status. NEVER touches 'provider_completed' or 'settlement_pending'.
 ------------------------------------------------------------
 create or replace function public.release_stale_ai_reservations()
 returns integer
@@ -72,8 +78,10 @@ revoke all on function public.release_stale_ai_reservations() from public, anon,
 grant execute on function public.release_stale_ai_reservations() to service_role;
 
 ------------------------------------------------------------
--- 4. Atomic RPC: reserve_ai_feature_usage (v2 with atomic budget & strict limits)
+-- 4. Atomic RPC: reserve_ai_feature_usage
 ------------------------------------------------------------
+drop function if exists public.reserve_ai_feature_usage(uuid, text, text);
+
 create or replace function public.reserve_ai_feature_usage(
   p_user_id uuid,
   p_feature text,
@@ -102,7 +110,7 @@ declare
   v_budget record;
   v_existing record;
 begin
-  -- 0. Clean stale reservations first
+  -- 0. Clean stale 'reserved' requests older than 5 minutes
   perform public.release_stale_ai_reservations();
 
   -- 1. Idempotency check: if request_id already exists, return existing record
@@ -116,14 +124,14 @@ begin
     return;
   end if;
 
-  -- 2. Determine conservative maximum reserved cost based on feature limits
+  -- 2. Determine defensible worst-case reserved cost based on maximum allowed prompt & output tokens
   case p_feature
-    when 'message'          then v_reserved_cost := 0.013000;
-    when 'deepscan'         then v_reserved_cost := 0.021000;
-    when 'resume'           then v_reserved_cost := 0.038000;
-    when 'interview'        then v_reserved_cost := 0.025000;
-    when 'interview_voice'  then v_reserved_cost := 0.021500;
-    when 'backgroundcheck'  then v_reserved_cost := 0.020000;
+    when 'message'          then v_reserved_cost := 0.015000;
+    when 'deepscan'         then v_reserved_cost := 0.025000;
+    when 'resume'           then v_reserved_cost := 0.040000;
+    when 'interview'        then v_reserved_cost := 0.030000;
+    when 'interview_voice'  then v_reserved_cost := 0.025000;
+    when 'backgroundcheck'  then v_reserved_cost := 0.025000;
     else raise exception using errcode = '22023', message = 'invalid_feature';
   end case;
 
@@ -165,7 +173,7 @@ begin
       from public.ai_usage_ledger
       where user_id = p_user_id
         and entitlement_type = 'paid'
-        and status in ('reserved', 'completed')
+        and status in ('reserved', 'provider_completed', 'completed', 'settlement_pending')
         and created_at >= date_trunc('month', now() at time zone 'UTC');
 
     if v_used_count >= 60 then
@@ -211,7 +219,7 @@ begin
       where user_id = p_user_id
         and feature = p_feature
         and entitlement_type = 'trial'
-        and status in ('reserved', 'completed');
+        and status in ('reserved', 'provider_completed', 'completed', 'settlement_pending');
 
     if v_used_count >= v_max_allowance then
       raise exception using errcode = '22023', message = 'feature_quota_reached';
@@ -241,8 +249,11 @@ revoke all on function public.reserve_ai_feature_usage(uuid, text, text) from pu
 grant execute on function public.reserve_ai_feature_usage(uuid, text, text) to service_role;
 
 ------------------------------------------------------------
--- 5. Atomic RPC: settle_ai_feature_usage (v2 with budget settlement)
+-- 5. Atomic RPC: settle_ai_feature_usage
+-- Explicitly drop old signature returning void before creating returning boolean
 ------------------------------------------------------------
+drop function if exists public.settle_ai_feature_usage(text, text, integer, integer, integer, integer, numeric);
+
 create or replace function public.settle_ai_feature_usage(
   p_request_id text,
   p_status text,
@@ -262,7 +273,7 @@ declare
   v_budget_date date;
   v_actual_cost numeric(10, 6);
 begin
-  if p_status not in ('completed', 'failed', 'released') then
+  if p_status not in ('completed', 'provider_completed', 'failed', 'released', 'settlement_pending') then
     raise exception using errcode = '22023', message = 'invalid_settlement_status';
   end if;
 
@@ -271,31 +282,68 @@ begin
     where request_id = p_request_id
     for update;
 
-  if not found or v_ledger.status in ('completed', 'failed', 'released') then
+  -- Idempotency check: if already settled or in terminal completed/failed state, return true
+  if not found then
     return false;
   end if;
 
+  if v_ledger.status in ('completed', 'failed', 'released') then
+    return true;
+  end if;
+
   v_actual_cost := greatest(0.000000, p_cost_usd);
-
-  update public.ai_usage_ledger
-    set status = p_status,
-        input_tokens = greatest(0, p_input_tokens),
-        output_tokens = greatest(0, p_output_tokens),
-        cache_read_tokens = greatest(0, p_cache_read_tokens),
-        cache_creation_tokens = greatest(0, p_cache_create_tokens),
-        estimated_cost_usd = v_actual_cost,
-        completed_at = now()
-    where request_id = p_request_id;
-
   v_budget_date := (v_ledger.created_at at time zone 'UTC')::date;
 
-  update public.daily_ai_budget
-    set reserved_usd = greatest(0.000000, reserved_usd - v_ledger.reserved_cost_usd),
-        settled_usd = settled_usd + (case when p_status = 'completed' then v_actual_cost else 0.000000 end),
-        updated_at = now()
-    where budget_date = v_budget_date;
+  if p_status = 'provider_completed' then
+    update public.ai_usage_ledger
+      set status = 'provider_completed',
+          input_tokens = greatest(0, p_input_tokens),
+          output_tokens = greatest(0, p_output_tokens),
+          cache_read_tokens = greatest(0, p_cache_read_tokens),
+          cache_creation_tokens = greatest(0, p_cache_create_tokens),
+          estimated_cost_usd = v_actual_cost,
+          completed_at = now()
+      where request_id = p_request_id;
+    return true;
+  elsif p_status = 'settlement_pending' then
+    update public.ai_usage_ledger
+      set status = 'settlement_pending',
+          estimated_cost_usd = v_actual_cost,
+          completed_at = now()
+      where request_id = p_request_id;
+    return true;
+  elsif p_status = 'completed' then
+    update public.ai_usage_ledger
+      set status = 'completed',
+          input_tokens = greatest(0, p_input_tokens),
+          output_tokens = greatest(0, p_output_tokens),
+          cache_read_tokens = greatest(0, p_cache_read_tokens),
+          cache_creation_tokens = greatest(0, p_cache_create_tokens),
+          estimated_cost_usd = v_actual_cost,
+          completed_at = now()
+      where request_id = p_request_id;
 
-  return true;
+    update public.daily_ai_budget
+      set reserved_usd = greatest(0.000000, reserved_usd - v_ledger.reserved_cost_usd),
+          settled_usd = settled_usd + v_actual_cost,
+          updated_at = now()
+      where budget_date = v_budget_date;
+
+    return true;
+  else
+    -- failed or released
+    update public.ai_usage_ledger
+      set status = p_status,
+          completed_at = now()
+      where request_id = p_request_id;
+
+    update public.daily_ai_budget
+      set reserved_usd = greatest(0.000000, reserved_usd - v_ledger.reserved_cost_usd),
+          updated_at = now()
+      where budget_date = v_budget_date;
+
+    return true;
+  end if;
 end;
 $$;
 
