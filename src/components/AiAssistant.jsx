@@ -1,15 +1,51 @@
 import { useState } from "react";
+import { m, AnimatePresence } from "motion/react";
 import { useAuth } from "../auth.jsx";
 import { callAi } from "../lib/ai.js";
 import { AI_FEATURES } from "../lib/pricing.js";
+import { useReducedMotion } from "../motion/useMotionConfig.js";
+import { duration, easing } from "../motion/tokens.js";
+import { copyToClipboard } from "../lib/clipboard.js";
+
+// The generated answer reads like correspondence: it rises in as one sheet,
+// then its paragraphs settle one after another rather than appearing at once.
+const resultParent = {
+  hidden: {},
+  show: { transition: { staggerChildren: 0.08, delayChildren: 0.06 } },
+};
+const resultLine = {
+  hidden: { opacity: 0, y: 8 },
+  show: { opacity: 1, y: 0, transition: { duration: duration.normal, ease: easing.enter } },
+};
+
+// A calm three-bar rhythm for the "AI is drafting" state — a cursor-like pulse,
+// not a spinner. Under reduced motion it collapses to a plain label.
+function ThinkingRhythm({ reduced }) {
+  if (reduced) return <span className="text-xs font-medium text-brand">Thinking…</span>;
+  return (
+    <span className="flex items-end gap-1" aria-hidden="true">
+      {[0, 1, 2].map((i) => (
+        <m.span
+          key={i}
+          className="h-4 w-1 origin-bottom rounded-full bg-brand"
+          initial={{ scaleY: 0.35 }}
+          animate={{ scaleY: [0.35, 1, 0.35] }}
+          transition={{ duration: 0.9, ease: "easeInOut", repeat: Infinity, delay: i * 0.15 }}
+        />
+      ))}
+    </span>
+  );
+}
 
 export default function AiAssistant({ rawText, intake, settings }) {
   const { user, tier, usageCount, aiCap, refreshEntitlement } = useAuth();
+  const reduced = useReducedMotion();
   const [activeTab, setActiveTab] = useState("message");
   const [resumeText, setResumeText] = useState("");
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [copied, setCopied] = useState(false);
 
   const handleGenerate = async () => {
     if (!rawText?.trim()) {
@@ -23,6 +59,7 @@ export default function AiAssistant({ rawText, intake, settings }) {
     setError("");
     setLoading(true);
     setResult(null);
+    setCopied(false);
     try {
       const payload = { rawText, intake, settings };
       if (activeTab === "resume") payload.extra = { resumeText };
@@ -37,12 +74,16 @@ export default function AiAssistant({ rawText, intake, settings }) {
   };
 
   const feature = AI_FEATURES.find((f) => f.id === activeTab);
-  const tabStyle = (id) =>
-    `px-4 py-2.5 text-sm font-medium rounded-full transition-colors ${
-      activeTab === id
-        ? "bg-brand text-paper"
-        : "text-ink-soft hover:text-ink hover:bg-panel"
-    }`;
+
+  const handleCopyResult = async () => {
+    try {
+      await copyToClipboard(result);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1900);
+    } catch {
+      setError("Couldn't copy automatically. Select the text and copy it.");
+    }
+  };
 
   const remaining = Math.max(0, aiCap - usageCount);
 
@@ -93,7 +134,7 @@ export default function AiAssistant({ rawText, intake, settings }) {
         </span>
       </div>
 
-      {/* Tabs */}
+      {/* Tabs — the active pill travels between features (layoutId) */}
       <div className="flex flex-wrap gap-1.5 mb-4 p-1 rounded-2xl bg-panel">
         {AI_FEATURES.map((f) => (
           <button
@@ -103,10 +144,21 @@ export default function AiAssistant({ rawText, intake, settings }) {
               setActiveTab(f.id);
               setResult(null);
               setError("");
+              setCopied(false);
             }}
-            className={tabStyle(f.id)}
+            className={`relative px-4 py-2.5 text-sm font-medium rounded-full transition-colors ${
+              activeTab === f.id ? "text-paper" : "text-ink-soft hover:text-ink"
+            }`}
           >
-            {f.name}
+            {activeTab === f.id && (
+              <m.span
+                layoutId="ai-tab-indicator"
+                className="absolute inset-0 rounded-full bg-brand"
+                transition={{ duration: duration.normal, ease: easing.enter }}
+                aria-hidden="true"
+              />
+            )}
+            <span className="relative z-10">{f.name}</span>
           </button>
         ))}
       </div>
@@ -154,14 +206,60 @@ export default function AiAssistant({ rawText, intake, settings }) {
         </div>
       )}
 
-      {/* Result */}
-      {result && (
-        <div className="mt-4 rounded-2xl border border-line bg-paper p-5">
-          <div className="prose prose-sm max-w-none text-ink whitespace-pre-wrap font-sans leading-relaxed">
-            {result}
-          </div>
+      {/* Thinking state — a calm drafting rhythm while the AI works */}
+      {loading && (
+        <div className="mt-4 flex items-center gap-3 rounded-2xl border border-line bg-paper p-5">
+          <ThinkingRhythm reduced={reduced} />
+          <p className="text-sm text-ink-soft">Drafting your {feature?.name}…</p>
         </div>
       )}
+
+      {/* Result — rises in like a sheet of correspondence, then unfolds */}
+      <AnimatePresence>
+        {result && !loading && (
+          <m.div
+            key="ai-result"
+            initial={reduced ? false : { opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: duration.deliberate, ease: easing.enter }}
+            className="mt-4 rounded-2xl border border-line bg-paper p-5"
+          >
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <span className="eyebrow">{feature?.name}</span>
+              <button
+                type="button"
+                onClick={handleCopyResult}
+                className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold transition-all duration-200 hover:-translate-y-0.5 focus-visible:outline-none ${
+                  copied ? "bg-go text-paper" : "bg-panel text-ink-soft hover:bg-ink hover:text-paper"
+                }`}
+                aria-live="polite"
+              >
+                <span aria-hidden="true">{copied ? "✓" : "⧉"}</span>
+                {copied ? "Copied" : "Copy"}
+              </button>
+            </div>
+            {reduced ? (
+              <div className="prose prose-sm max-w-none whitespace-pre-wrap font-sans leading-relaxed text-ink">
+                {result}
+              </div>
+            ) : (
+              <m.div
+                className="prose prose-sm max-w-none font-sans leading-relaxed text-ink"
+                variants={resultParent}
+                initial="hidden"
+                animate="show"
+              >
+                {result.split(/\n{2,}/).map((para, i) => (
+                  <m.p key={i} className="mb-3 whitespace-pre-wrap last:mb-0" variants={resultLine}>
+                    {para}
+                  </m.p>
+                ))}
+              </m.div>
+            )}
+          </m.div>
+        )}
+      </AnimatePresence>
     </section>
   );
 }

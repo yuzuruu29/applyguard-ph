@@ -1,0 +1,11 @@
+schema_version: 1
+module_path: frontend_app/interview_pages
+title: Premium Interview & Offers Pages
+scope:
+    - src/components/MockInterviewPage.jsx
+    - src/components/ResultView.jsx
+    - src/components/OffersPage.jsx
+source_files: []
+depends_on: []
+related_to:
+    - path: frontend_app/app_shell

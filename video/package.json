@@ -1,0 +1,29 @@
+{
+  "name": "applyguard-product-story",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "studio": "remotion studio",
+    "render:desktop": "remotion render ApplyGuardProductStoryDesktop out/desktop.mp4 --codec h264",
+    "render:desktop:webm": "remotion render ApplyGuardProductStoryDesktop out/desktop.webm --codec vp8",
+    "render:mobile": "remotion render ApplyGuardProductStoryMobile out/mobile.mp4 --codec h264",
+    "render:mobile:webm": "remotion render ApplyGuardProductStoryMobile out/mobile.webm --codec vp8",
+    "render:poster:desktop": "remotion still ApplyGuardProductStoryDesktop out/poster-desktop.png --frame 195",
+    "render:poster:mobile": "remotion still ApplyGuardProductStoryMobile out/poster-mobile.png --frame 195",
+    "render:all": "npm run render:desktop && npm run render:desktop:webm && npm run render:mobile && npm run render:mobile:webm && npm run render:poster:desktop && npm run render:poster:mobile",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@remotion/cli": "4.0.293",
+    "@remotion/renderer": "4.0.293",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "remotion": "4.0.293"
+  },
+  "devDependencies": {
+    "@types/react": "^19.1.8",
+    "@types/react-dom": "^19.1.6",
+    "typescript": "^5.8.3",
+    "vitest": "^3.2.4"
+  }
+}

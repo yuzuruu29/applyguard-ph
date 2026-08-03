@@ -1,8 +1,15 @@
 import { Link } from "react-router-dom";
+import { m, AnimatePresence } from "motion/react";
 import { useApp } from "../store.jsx";
 import { JOB_STATUSES } from "../lib/storage.js";
 import { VERDICT_TONE, RISK_TONE, STATUS_TONE } from "../lib/tone.js";
 import { trackerStats } from "../lib/stats.js";
+import { duration, easing } from "../motion/tokens.js";
+
+// Pipeline order for the tracker. Jobs are rendered grouped by this rank so a
+// status change physically relocates a card to its new stage; Motion's `layout`
+// prop animates that move instead of the card blinking out and back in.
+const STATUS_RANK = Object.fromEntries(JOB_STATUSES.map((s, i) => [s, i]));
 
 function fmtDate(iso) {
   if (!iso) return "";
@@ -15,10 +22,24 @@ function JobCard({ job, onStatus, onFollowUp, onNotes, onDelete, index = 0 }) {
   const verdict = VERDICT_TONE[job.verdict] || VERDICT_TONE.Caution;
   const risk = RISK_TONE[job.riskLevel] || RISK_TONE.Medium;
 
+  // `layout` animates the card gliding to its new position when its status
+  // changes the sort order. Entrance/exit fade the card in/out through
+  // AnimatePresence. Under reduced motion, MotionConfig collapses the
+  // transform/layout parts to their final state (opacity still fades).
   return (
-    <li
-      className="rise elev elev-hover rounded-3xl border border-line bg-card p-5 sm:p-6"
-      style={{ animationDelay: `${0.05 * index}s` }}
+    <m.li
+      layout
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, scale: 0.96 }}
+      transition={{
+        layout: { duration: duration.deliberate, ease: easing.enter },
+        duration: duration.normal,
+        ease: easing.enter,
+        delay: Math.min(index * 0.04, 0.28),
+      }}
+      whileHover={{ y: -4, scale: 1.008 }}
+      className="elev rounded-3xl border border-line bg-card p-5 sm:p-6"
     >
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
@@ -104,13 +125,22 @@ function JobCard({ job, onStatus, onFollowUp, onNotes, onDelete, index = 0 }) {
           Remove
         </button>
       </div>
-    </li>
+    </m.li>
   );
 }
 
 export default function Tracker() {
   const { jobs, updateJob, deleteJob, notify } = useApp();
   const stats = trackerStats(jobs);
+
+  // Group by pipeline stage, newest first within each stage. A status change
+  // moves a card between groups; Motion's `layout` prop animates the relocation.
+  const sortedJobs = [...jobs].sort((a, b) => {
+    const ra = STATUS_RANK[a.status] ?? JOB_STATUSES.length;
+    const rb = STATUS_RANK[b.status] ?? JOB_STATUSES.length;
+    if (ra !== rb) return ra - rb;
+    return (b.createdAt || "").localeCompare(a.createdAt || "");
+  });
 
   const handleDelete = (job) => {
     if (window.confirm(`Remove "${job.title || "this job"}" from your tracker?`)) {
@@ -176,17 +206,19 @@ export default function Tracker() {
         </div>
       ) : (
         <ul className="space-y-5">
-          {jobs.map((job, i) => (
-            <JobCard
-              key={job.id}
-              job={job}
-              index={i}
-              onStatus={(id, status) => updateJob(id, { status })}
-              onFollowUp={(id, followUpBy) => updateJob(id, { followUpBy })}
-              onNotes={(id, notes) => updateJob(id, { notes })}
-              onDelete={handleDelete}
-            />
-          ))}
+          <AnimatePresence initial={false}>
+            {sortedJobs.map((job, i) => (
+              <JobCard
+                key={job.id}
+                job={job}
+                index={i}
+                onStatus={(id, status) => updateJob(id, { status })}
+                onFollowUp={(id, followUpBy) => updateJob(id, { followUpBy })}
+                onNotes={(id, notes) => updateJob(id, { notes })}
+                onDelete={handleDelete}
+              />
+            ))}
+          </AnimatePresence>
         </ul>
       )}
     </div>

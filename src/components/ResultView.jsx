@@ -1,11 +1,19 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
+import { m } from "motion/react";
 import { useApp } from "../store.jsx";
 import { VERDICT_TONE, RISK_TONE } from "../lib/tone.js";
+import { JOB_STATUSES } from "../lib/storage.js";
 import { useCountUp } from "../hooks/useCountUp.js";
+import { useReducedMotion } from "../motion/useMotionConfig.js";
+import { flagParent, flagHard, flagSoft, missingItem } from "../motion/variants.js";
+import { duration, easing } from "../motion/tokens.js";
 import { copyToClipboard } from "../lib/clipboard.js";
 import { shareSummary } from "../lib/share.js";
 import AiAssistant from "./AiAssistant.jsx";
+
+// whileInView plays the risk-card story once as the section scrolls in.
+const flagViewport = { once: true, amount: 0.3 };
 
 function ScoreRing({ score, toneClass }) {
   const r = 52;
@@ -63,7 +71,7 @@ function BreakdownBar({ label, value, max }) {
   );
 }
 
-function FlagRow({ flag, tone, index = 0 }) {
+function FlagRow({ flag, tone }) {
   const styles =
     tone === "hard"
       ? "border-stop/30 bg-stop-soft"
@@ -71,9 +79,9 @@ function FlagRow({ flag, tone, index = 0 }) {
   const dot = tone === "hard" ? "bg-stop" : "bg-warn";
   const labelColor = tone === "hard" ? "text-stop-ink" : "text-warn-ink";
   return (
-    <li
-      className={`rise rounded-2xl border ${styles} p-4`}
-      style={{ animationDelay: `${0.06 * index}s` }}
+    <m.li
+      className={`rounded-2xl border ${styles} p-4`}
+      variants={tone === "hard" ? flagHard : flagSoft}
     >
       <div className="flex items-start gap-3">
         <span className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${dot}`} aria-hidden="true" />
@@ -82,7 +90,61 @@ function FlagRow({ flag, tone, index = 0 }) {
           <p className="mt-0.5 text-sm text-ink-soft">{flag.why}</p>
         </div>
       </div>
-    </li>
+    </m.li>
+  );
+}
+
+// StatusTimeline — Phase 10 detail-view progress. Draws the application
+// pipeline (Saved → … → Closed) and grows a brand line up to the job's current
+// stage once on view, with a firm ink dot landing on that stage. It reads the
+// saved job's `status` directly — no fabricated event history — so it stays
+// truthful. Under reduced motion the line and dots render in their final state.
+function StatusTimeline({ status }) {
+  const reduced = useReducedMotion();
+  const idx = Math.max(0, JOB_STATUSES.indexOf(status));
+  const n = JOB_STATUSES.length;
+  const frac = n > 1 ? idx / (n - 1) : 0;
+  return (
+    <section className="elev rounded-3xl border border-line bg-card p-5 sm:p-6">
+      <p className="eyebrow mb-5">Application progress</p>
+      <div className="relative">
+        {/* Base rail + the brand line that grows to the current stage */}
+        <div className="absolute left-[7px] right-[7px] top-[7px] h-0.5 bg-line" aria-hidden="true" />
+        <m.div
+          className="absolute left-[7px] right-[7px] top-[7px] h-0.5 origin-left bg-brand"
+          initial={reduced ? false : { scaleX: 0 }}
+          animate={reduced ? { scaleX: frac } : undefined}
+          whileInView={reduced ? undefined : { scaleX: frac }}
+          viewport={{ once: true, amount: 0.6 }}
+          transition={{ duration: duration.reveal, ease: easing.enter }}
+          aria-hidden="true"
+        />
+        <ol className="relative flex justify-between">
+          {JOB_STATUSES.map((s, i) => {
+            const done = i <= idx;
+            const current = i === idx;
+            return (
+              <li key={s} className="flex flex-col items-center gap-2">
+                <m.span
+                  className={`h-3.5 w-3.5 rounded-full border-2 ${
+                    done ? "border-brand bg-brand" : "border-line bg-card"
+                  }`}
+                  initial={reduced ? false : { scale: 0 }}
+                  animate={reduced ? { scale: current ? 1.15 : 1 } : undefined}
+                  whileInView={reduced ? undefined : { scale: current ? 1.15 : 1 }}
+                  viewport={{ once: true, amount: 0.6 }}
+                  transition={{ duration: duration.normal, ease: easing.overshoot, delay: reduced ? 0 : 0.08 * i }}
+                  aria-hidden="true"
+                />
+                <span className={`text-[0.7rem] ${current ? "font-semibold text-ink" : "text-ink-faint"}`}>
+                  {s}
+                </span>
+              </li>
+            );
+          })}
+        </ol>
+      </div>
+    </section>
   );
 }
 
@@ -108,6 +170,13 @@ export default function ResultView() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { result, getJob, saveJob, notify, settings } = useApp();
+  const reduced = useReducedMotion();
+
+  // When reduced-motion is on, lists render straight into their final state
+  // (no viewport gating, no transform); otherwise they play once on scroll-in.
+  const listMotion = reduced
+    ? {}
+    : { variants: flagParent, initial: "hidden", whileInView: "show", viewport: flagViewport };
 
   const [copied, setCopied] = useState(false);
   const [summaryCopied, setSummaryCopied] = useState(false);
@@ -205,7 +274,15 @@ export default function ResultView() {
       </div>
 
       {/* ── Verdict + score ──────────────────────────────────────── */}
-      <section className="rise elev rounded-3xl border border-line bg-card p-6 sm:p-8">
+      {/* Scan completion (Phase 4): the verdict card expands from the paper
+          surface, picking up the handoff from the scan form's narrowing
+          document. Inner stamp/settle sequencing then plays afterward. */}
+      <m.section
+        className="elev rounded-3xl border border-line bg-card p-6 sm:p-8"
+        initial={reduced ? false : { opacity: 0, scale: 0.97, y: 12 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        transition={{ duration: duration.deliberate, ease: easing.enter }}
+      >
         <p className="eyebrow">{data.title}</p>
         <div className="mt-4 flex flex-col items-start gap-6 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-5">
@@ -226,7 +303,10 @@ export default function ResultView() {
           </div>
           <ScoreRing score={data.score} toneClass={verdict.ring} />
         </div>
-      </section>
+      </m.section>
+
+      {/* ── Application progress — saved jobs only (Phase 10) ────── */}
+      {!isPreview && <StatusTimeline status={data.status} />}
 
       {/* ── Score breakdown ──────────────────────────────────────── */}
       <section className="rise d2 elev rounded-3xl border border-line bg-card p-6 sm:p-8">
@@ -277,21 +357,21 @@ export default function ResultView() {
             {hard.length > 0 && (
               <div>
                 <p className="eyebrow mb-2 text-stop-ink">Hard stops</p>
-                <ul className="space-y-3">
-                  {hard.map((f, i) => (
-                    <FlagRow key={f.id} flag={f} tone="hard" index={i} />
+                <m.ul className="space-y-3" {...listMotion}>
+                  {hard.map((f) => (
+                    <FlagRow key={f.id} flag={f} tone="hard" />
                   ))}
-                </ul>
+                </m.ul>
               </div>
             )}
             {soft.length > 0 && (
               <div>
                 <p className="eyebrow mb-2 text-warn-ink">Worth a closer look</p>
-                <ul className="space-y-3">
-                  {soft.map((f, i) => (
-                    <FlagRow key={f.id} flag={f} tone="soft" index={i} />
+                <m.ul className="space-y-3" {...listMotion}>
+                  {soft.map((f) => (
+                    <FlagRow key={f.id} flag={f} tone="soft" />
                   ))}
-                </ul>
+                </m.ul>
               </div>
             )}
           </div>
@@ -308,11 +388,18 @@ export default function ResultView() {
                 The post leaves these open. Get them answered first.
               </p>
               <ul className="mt-4 space-y-2.5">
-                {missing.map((m) => (
-                  <li key={m} className="flex items-start gap-2.5 text-ink">
+                {missing.map((q) => (
+                  <m.li
+                    key={q}
+                    className="flex items-start gap-2.5 text-ink"
+                    variants={reduced ? undefined : missingItem}
+                    initial={reduced ? false : "hidden"}
+                    whileInView={reduced ? undefined : "show"}
+                    viewport={flagViewport}
+                  >
                     <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-warn" aria-hidden="true" />
-                    <span>{m}</span>
-                  </li>
+                    <span>{q}</span>
+                  </m.li>
                 ))}
               </ul>
             </>

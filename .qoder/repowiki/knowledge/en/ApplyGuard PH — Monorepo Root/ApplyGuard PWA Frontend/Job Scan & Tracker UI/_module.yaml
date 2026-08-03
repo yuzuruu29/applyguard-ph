@@ -1,0 +1,11 @@
+schema_version: 1
+module_path: frontend_app/interview_tracker
+title: Job Scan & Tracker UI
+scope:
+    - src/components/Tracker.jsx
+    - src/components/ScanForm.jsx
+    - src/components/AiAssistant.jsx
+source_files: []
+depends_on: []
+related_to:
+    - path: frontend_app/app_shell

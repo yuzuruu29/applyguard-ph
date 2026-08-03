@@ -1,0 +1,4 @@
+- Premium gating is enforced early in each page by reading `tier` from `useAuth()` and either returning `null` or redirecting to `/account` / `/offers` before rendering UI.
+- User-facing feedback goes through the global `notify(message, type)` from `useApp()` instead of `alert` or local toast state.
+- UI is built exclusively with Tailwind utility classes using the project's design tokens (`bg-card`, `text-ink`, `border-line`, `rounded-3xl`, etc.) rather than custom CSS modules.
+- Async user actions wrap their work in `try/catch` and always emit a `notify` call for both success and error paths, leaving transient UI state (e.g. `checkingOut`, `copied`) reset in `finally` or explicit catch branches.

@@ -1,0 +1,2 @@
+- Monetization plan documents follow a strict numbered prefix convention (`00-`, `01-`, …) to enforce ordering within each topic directory.
+- The PDF generator centralizes brand colors as named `HexColor` constants (`INK`, `SOFT_INK`, `PAPER`, `BRAND`, `GOLD`, `LINE`, `WARN`) and reuses them across canvas drawing and ParagraphStyle definitions rather than hard-coding hex literals inline.

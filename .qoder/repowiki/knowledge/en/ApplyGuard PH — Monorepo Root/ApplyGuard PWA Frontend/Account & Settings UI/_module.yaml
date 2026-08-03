@@ -1,0 +1,11 @@
+schema_version: 1
+module_path: frontend_app/account_settings
+title: Account & Settings UI
+scope:
+    - src/components/AccountPage.jsx
+    - src/components/Settings.jsx
+    - src/components/Toast.jsx
+source_files: []
+depends_on: []
+related_to:
+    - path: frontend_app/app_shell

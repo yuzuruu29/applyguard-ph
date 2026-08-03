@@ -1,0 +1,4 @@
+- Context providers are exported as both a Provider component and a typed `useXxx` hook that throws if used outside the provider, enforcing correct mount order.
+- Async side effects inside `useEffect` use a local `let cancelled = false` flag and check it before `setState` to avoid stale updates on unmount or dependency change.
+- User-facing async operations set a `{ at, error }` status object rather than throwing directly, so UI can display retryable failure messages without crashing.
+- Mobile-only dependencies are imported dynamically (`await import(...)`) inside a runtime-capacity guard so the web bundle stays unaffected when Capacitor is absent.

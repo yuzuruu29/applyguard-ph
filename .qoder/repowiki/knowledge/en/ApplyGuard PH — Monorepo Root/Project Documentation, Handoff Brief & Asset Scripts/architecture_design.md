@@ -1,0 +1,6 @@
+Three independent artifacts with no runtime coupling to the application:
+- `docs/HANDOFF_QWEN_MAX.md` — a human-authored review handoff brief describing the full stack (React 19/Vite frontend, Supabase Edge Functions + Postgres RLS, PayPal Checkout flow, Anthropic proxy) and enumerating the five audit priorities for an external reviewer.
+- `docs/superpowers/plans/` — staged architecture/design notes (`00-architecture.md` through `04-ai-features.md`) plus a standalone hook-frontend design doc; these are planning artifacts consumed only by humans.
+- `scripts/generate_message_pack.py` — a standalone Python tool using ReportLab's Platypus to render 20 job-application message templates into a branded A4 PDF at `supabase/functions/download-message-pack/ApplyGuard-PH-Message-Pack.pdf`, which is then served by the `download-message-pack` Supabase Edge Function behind authentication.
+- `.claude/launch.json` — VS Code launch configuration pointing at `npm run dev` on port 5173 so Claude Code can attach to the Vite dev server.
+Dependency direction is one-way: scripts produce static assets consumed by the app; docs and plans are read-only references.

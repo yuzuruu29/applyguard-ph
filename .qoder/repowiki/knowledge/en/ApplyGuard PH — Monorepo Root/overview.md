@@ -1,0 +1,1 @@
+Root of the ApplyGuard PH project that wires a React/Vite PWA frontend, Capacitor mobile wrappers, Supabase edge functions, and deployment configs into one build-and-deploy surface.

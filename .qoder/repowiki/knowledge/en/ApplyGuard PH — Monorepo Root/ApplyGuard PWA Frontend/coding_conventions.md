@@ -1,0 +1,3 @@
+- Every feature file has a co-located `.test.js` sibling using Vitest (e.g. `scoring.test.js`, `followups.test.js`, `entitlement.test.js`).
+- UI styling uses Tailwind utility classes exclusively — no CSS-in-JS or per-component style files beyond the shared `index.css`.
+- Cross-cutting concerns (auth, app state) are exposed as React Context providers imported from `./auth.jsx` / `./store.jsx` and applied at the top of `App.jsx`, not per-page.

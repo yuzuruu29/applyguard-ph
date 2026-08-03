@@ -1,0 +1,1 @@
+Root HTML entry point and static PWA assets (service worker, web manifest, OG/Twitter images, favicon) that bootstrap the React app and enable installable offline behavior.

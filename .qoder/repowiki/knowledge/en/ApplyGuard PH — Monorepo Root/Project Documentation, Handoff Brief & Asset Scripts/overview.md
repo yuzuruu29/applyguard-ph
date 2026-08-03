@@ -1,0 +1,1 @@
+Holds the Qwen handoff brief, monetization design plans, and a ReportLab script that generates the paid "Message Pack" PDF delivered by the Supabase edge function.

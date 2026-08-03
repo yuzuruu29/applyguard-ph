@@ -1,0 +1,17 @@
+schema_version: 1
+module_path: ""
+title: ApplyGuard PH — Monorepo Root
+scope:
+    - README.md
+    - .gitignore
+    - package.json
+    - package-lock.json
+    - vite.config.js
+    - netlify.toml
+    - vercel.json
+    - .github/workflows/supabase.yml
+    - .env.example
+    - capacitor.config.ts
+source_files: []
+depends_on: []
+related_to: []

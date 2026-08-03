@@ -59,6 +59,19 @@ body {
   text-rendering: optimizeLegibility;
 }
 
+/* Dark mode — follow system preference */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-paper: #1a1814;
+    --color-card: #24221d;
+    --color-panel: #2a2822;
+    --color-line: #444038;
+    --color-ink: #e8e3d9;
+    --color-ink-soft: #b8b2a8;
+    --color-ink-faint: #9a948a;
+  }
+}
+
 /* selection color on-brand */
 ::selection {
   background-color: rgb(11 110 95 / 0.15);
@@ -210,9 +223,17 @@ body {
   animation: ag-glow 3s ease-in-out infinite;
 }
 
-/* animated gradient border — rotating conic gradient behind a card */
+/* animated gradient border — the conic gradient's ANGLE rotates, not the
+   element. Rotating the element would tilt the 1px ring rectangle and draw
+   diagonal lines across the card; animating --ag-angle keeps the ring aligned
+   and only sweeps the colour. @property makes the custom angle animatable. */
+@property --ag-angle {
+  syntax: "<angle>";
+  inherits: false;
+  initial-value: 0deg;
+}
 @keyframes ag-gradient-spin {
-  to { transform: rotate(360deg); }
+  to { --ag-angle: 360deg; }
 }
 .gradient-border {
   position: relative;

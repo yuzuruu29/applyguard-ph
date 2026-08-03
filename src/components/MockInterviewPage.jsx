@@ -1,13 +1,17 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
+import { m, AnimatePresence } from "motion/react";
 import { useAuth } from "../auth.jsx";
 import { useApp } from "../store.jsx";
 import { supabase } from "../lib/supabase.js";
+import { useReducedMotion } from "../motion/useMotionConfig.js";
+import { duration, easing } from "../motion/tokens.js";
 
 export default function MockInterviewPage() {
   const { user, tier } = useAuth();
   const { notify } = useApp();
   const navigate = useNavigate();
+  const reduced = useReducedMotion();
   const videoRef = useRef(null);
   
   const [stream, setStream] = useState(null);
@@ -246,18 +250,27 @@ export default function MockInterviewPage() {
 
           {/* Transcript / Conversation */}
           <div className="rounded-3xl border border-line bg-card p-6 h-64 overflow-y-auto space-y-4">
-            {messages.filter(m => m.role === "assistant" || (m.role === "user" && m !== messages[0])).map((m, i) => (
-              <div key={i} className={`flex flex-col ${m.role === "user" ? "items-end" : "items-start"}`}>
-                <span className="mb-1 text-xs font-semibold text-ink-faint">
-                  {m.role === "user" ? "You" : "AI Interviewer"}
-                </span>
-                <div className={`max-w-[80%] rounded-2xl px-4 py-2 text-sm ${
-                  m.role === "user" ? "bg-brand text-paper" : "bg-paper border border-line text-ink"
-                }`}>
-                  {m.content}
-                </div>
-              </div>
-            ))}
+            <AnimatePresence initial={false}>
+              {messages.filter((msg) => msg.role === "assistant" || (msg.role === "user" && msg !== messages[0])).map((msg, i) => (
+                <m.div
+                  key={i}
+                  layout={!reduced}
+                  initial={reduced ? false : { opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: duration.normal, ease: easing.enter }}
+                  className={`flex flex-col ${msg.role === "user" ? "items-end" : "items-start"}`}
+                >
+                  <span className="mb-1 text-xs font-semibold text-ink-faint">
+                    {msg.role === "user" ? "You" : "AI Interviewer"}
+                  </span>
+                  <div className={`max-w-[80%] rounded-2xl px-4 py-2 text-sm ${
+                    msg.role === "user" ? "bg-brand text-paper" : "bg-paper border border-line text-ink"
+                  }`}>
+                    {msg.content}
+                  </div>
+                </m.div>
+              ))}
+            </AnimatePresence>
             {isRecording && (
               <div className="flex flex-col items-end">
                 <span className="mb-1 text-xs font-semibold text-ink-faint">You</span>

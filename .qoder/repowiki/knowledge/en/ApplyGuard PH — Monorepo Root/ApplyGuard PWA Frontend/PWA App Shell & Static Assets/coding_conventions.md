@@ -1,0 +1,2 @@
+- Public resources are referenced by absolute URLs rooted at `/` rather than relative paths, ensuring correct resolution under both dev server and SPA redirects.
+- PWA identity (theme color, icons, share target, description) is declared once in `manifest.webmanifest` and mirrored in `index.html` meta tags for social previews.

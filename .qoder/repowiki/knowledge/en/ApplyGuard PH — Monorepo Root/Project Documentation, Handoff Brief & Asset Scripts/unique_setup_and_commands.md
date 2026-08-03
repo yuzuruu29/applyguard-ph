@@ -1,0 +1,1 @@
+Regenerate the paid PDF asset by running `python scripts/generate_message_pack.py` from the repo root; it writes `supabase/functions/download-message-pack/ApplyGuard-PH-Message-Pack.pdf`. The `.claude/launch.json` file lets Claude Code start the dev server via `npm run dev` on port 5173.

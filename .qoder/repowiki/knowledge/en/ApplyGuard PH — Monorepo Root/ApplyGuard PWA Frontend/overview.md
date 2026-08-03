@@ -1,0 +1,1 @@
+React + Vite single-page app that wires auth, global state, and react-router routes around the scan/tracker/account/interview page components, with a PWA service worker for offline installability.

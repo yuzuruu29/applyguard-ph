@@ -1,10 +1,14 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { PayPalScriptProvider, PayPalButtons } from "@paypal/react-paypal-js";
+import { m } from "motion/react";
 import { useAuth } from "../auth.jsx";
 import { useApp } from "../store.jsx";
 import { PLANS, AI_FEATURES } from "../lib/pricing.js";
 import { createPayPalOrder, capturePayPalOrder } from "../lib/billing.js";
+import { useReducedMotion } from "../motion/useMotionConfig.js";
+import { duration, easing } from "../motion/tokens.js";
+import TrialLedger from "./TrialLedger.jsx";
 
 const TIER_CARDS = [
   { ...PLANS.monthly, featured: false, icon: "🔄" },
@@ -16,8 +20,13 @@ function OffersContent({ paypalConfigured }) {
   const { user, backendEnabled, tier: currentTier, entitlement, refreshEntitlement } = useAuth();
   const { notify } = useApp();
   const navigate = useNavigate();
+  const reduced = useReducedMotion();
   const [checkingOut, setCheckingOut] = useState(null);
   const paymentsEnabled = backendEnabled && paypalConfigured;
+
+  // Per-feature trial usage from the server row, if present. The ledger only
+  // *displays* these — it never derives counts locally.
+  const trialUsed = (entitlement && entitlement.trial_used) || {};
 
   const handlePayPalApprove = async (data, actions, planId) => {
     try {
@@ -61,29 +70,32 @@ function OffersContent({ paypalConfigured }) {
 
         {/* 7-Day Pro Preview Banner */}
         {(!entitlement || entitlement.trial_status === "eligible") && (
-          <div className="mt-6 rounded-3xl border border-brand bg-brand/5 p-6 sm:p-8 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
-            <div>
+          <div className="mt-6 rounded-3xl border border-brand bg-brand/5 p-6 sm:p-8 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
+            <div className="max-w-md">
               <span className="rounded-full bg-brand px-3 py-1 text-xs font-semibold text-paper">Pro Preview</span>
               <h2 className="mt-2 font-display text-2xl text-ink">Try ApplyGuard Pro free for 7 days</h2>
               <p className="mt-1 text-sm text-ink-soft">
                 Limited AI scans, resume tailoring, outreach assistance, and interview practice. No credit card required.
               </p>
+              <button
+                type="button"
+                onClick={() => {
+                  if (!user) {
+                    navigate("/account");
+                    notify("Sign in to start your 7-day Pro Preview.", "info");
+                  } else {
+                    navigate("/scan");
+                    notify("Run your first AI request to automatically activate your 7-day Pro Preview.", "info");
+                  }
+                }}
+                className="mt-5 rounded-full bg-brand px-6 py-3 font-semibold text-paper hover:bg-brand-deep transition-all duration-200"
+              >
+                Start 7-Day Pro Preview
+              </button>
             </div>
-            <button
-              type="button"
-              onClick={() => {
-                if (!user) {
-                  navigate("/account");
-                  notify("Sign in to start your 7-day Pro Preview.", "info");
-                } else {
-                  navigate("/scan");
-                  notify("Run your first AI request to automatically activate your 7-day Pro Preview.", "info");
-                }
-              }}
-              className="shrink-0 rounded-full bg-brand px-6 py-3 font-semibold text-paper hover:bg-brand-deep transition-all duration-200"
-            >
-              Start 7-Day Pro Preview
-            </button>
+            <div className="w-full lg:w-80 shrink-0">
+              <TrialLedger used={trialUsed} />
+            </div>
           </div>
         )}
 
@@ -103,8 +115,32 @@ function OffersContent({ paypalConfigured }) {
       <div className="grid grid-cols-1 gap-5 md:grid-cols-3">
         {TIER_CARDS.map((plan, i) => (
           <div key={plan.id} style={{ animationDelay: `${0.07 * i}s` }}
-            className={`rise elev elev-hover flex flex-col rounded-3xl border bg-card p-6 ${
-              plan.featured ? "border-brand shadow-sm shadow-brand/10" : "border-line"}`}>
+            className={`rise elev elev-hover relative flex flex-col rounded-3xl bg-card p-6 ${
+              plan.featured
+                ? "overflow-hidden border-2 border-brand ring-1 ring-brand/20 ring-offset-2 ring-offset-card shadow-sm shadow-brand/10"
+                : "border border-line"}`}>
+            {/* Pro Pass: one controlled border-light traversal on enter-view — never a constant pulse */}
+            {plan.featured && !reduced && (
+              <m.span
+                aria-hidden="true"
+                className="pointer-events-none absolute inset-y-0 -left-1/3 w-1/3 bg-gradient-to-r from-transparent via-brand/15 to-transparent"
+                initial={{ x: 0 }}
+                whileInView={{ x: "460%" }}
+                viewport={{ once: true, amount: 0.5 }}
+                transition={{ duration: duration.reveal * 1.7, ease: easing.enter, delay: 0.25 }}
+              />
+            )}
+            {/* Pro Pass: small green entitlement seal */}
+            {plan.featured && (
+              <span
+                className="absolute right-5 top-5 inline-flex h-9 w-9 items-center justify-center rounded-full border border-go/40 bg-go-soft text-go-ink"
+                aria-label="Best value plan"
+              >
+                <svg className="h-4 w-4" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8">
+                  <path d="M3.5 8.5l3 3 6-7" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </span>
+            )}
             {plan.featured && (
               <span className="mb-3 w-fit rounded-full bg-brand px-3 py-1 text-xs font-semibold text-paper">Best value</span>
             )}

@@ -1,0 +1,119 @@
+# 知识卡导出索引文件
+schema_version: 1
+locale: en-US
+branch: main
+nodes_managed: true
+exported_at: "2026-07-22T17:50:23Z"
+modules:
+    "":
+        dir_name: ApplyGuard PH — Monorepo Root
+        title: ApplyGuard PH — Monorepo Root
+        scope:
+            - README.md
+            - .gitignore
+            - package.json
+            - package-lock.json
+            - vite.config.js
+            - netlify.toml
+            - vercel.json
+            - .github/workflows/supabase.yml
+            - .env.example
+            - capacitor.config.ts
+        source_files: []
+        children:
+            - docs_and_scripts
+            - frontend_app
+        depends_on: []
+        related_to: []
+    docs_and_scripts:
+        dir_name: Project Documentation, Handoff Brief & Asset Scripts
+        title: Project Documentation, Handoff Brief & Asset Scripts
+        scope:
+            - docs/
+            - scripts/
+            - .claude/
+        source_files: []
+        children: []
+        depends_on: []
+        related_to: []
+    frontend_app:
+        dir_name: ApplyGuard PWA Frontend
+        title: ApplyGuard PWA Frontend
+        scope:
+            - src/
+            - index.html
+            - public/
+        source_files: []
+        children:
+            - frontend_app/account_settings
+            - frontend_app/app_shell
+            - frontend_app/interview_pages
+            - frontend_app/interview_tracker
+            - frontend_app/public_assets
+        depends_on: []
+        related_to: []
+    frontend_app/account_settings:
+        dir_name: Account & Settings UI
+        title: Account & Settings UI
+        scope:
+            - src/components/AccountPage.jsx
+            - src/components/Settings.jsx
+            - src/components/Toast.jsx
+        source_files: []
+        children: []
+        depends_on: []
+        related_to:
+            - path: frontend_app/app_shell
+    frontend_app/app_shell:
+        dir_name: App Shell & Global Providers
+        title: App Shell & Global Providers
+        scope:
+            - src/App.jsx
+            - src/main.jsx
+            - src/store.jsx
+            - src/auth.jsx
+            - src/mobile.js
+            - src/index.css
+        source_files: []
+        children: []
+        depends_on: []
+        related_to:
+            - path: frontend_app/account_settings
+            - path: frontend_app/interview_pages
+            - path: frontend_app/interview_tracker
+            - path: frontend_app/public_assets
+    frontend_app/interview_pages:
+        dir_name: Premium Interview & Offers Pages
+        title: Premium Interview & Offers Pages
+        scope:
+            - src/components/MockInterviewPage.jsx
+            - src/components/ResultView.jsx
+            - src/components/OffersPage.jsx
+        source_files: []
+        children: []
+        depends_on: []
+        related_to:
+            - path: frontend_app/app_shell
+    frontend_app/interview_tracker:
+        dir_name: Job Scan & Tracker UI
+        title: Job Scan & Tracker UI
+        scope:
+            - src/components/Tracker.jsx
+            - src/components/ScanForm.jsx
+            - src/components/AiAssistant.jsx
+        source_files: []
+        children: []
+        depends_on: []
+        related_to:
+            - path: frontend_app/app_shell
+    frontend_app/public_assets:
+        dir_name: PWA App Shell & Static Assets
+        title: PWA App Shell & Static Assets
+        scope:
+            - public/
+            - index.html
+        source_files: []
+        children: []
+        depends_on: []
+        related_to:
+            - path: frontend_app/app_shell

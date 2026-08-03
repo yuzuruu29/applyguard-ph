@@ -1,8 +1,11 @@
-import { useLayoutEffect } from "react";
-import { NavLink, Link, Outlet, useLocation } from "react-router-dom";
+import { useEffect, useLayoutEffect, useState } from "react";
+import { NavLink, Link, useLocation, useOutlet } from "react-router-dom";
+import { AnimatePresence, m } from "motion/react";
 import Toast from "./Toast.jsx";
 import { dueFollowUps } from "../lib/followups.js";
 import { useApp } from "../store.jsx";
+import { useReducedMotion } from "../motion/useMotionConfig.js";
+import { routeTransition } from "../motion/variants.js";
 
 const NAV = [
   { to: "/", label: "Scan", end: true },
@@ -42,16 +45,60 @@ function RouteScrollReset() {
   return null;
 }
 
-export default function Layout() {
+// Tracks whether the page has scrolled past a small threshold, so the header
+// can condense into its "scrolled" state (Phase 3). Passive listener.
+function useScrolled(threshold = 8) {
+  const [scrolled, setScrolled] = useState(false);
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > threshold);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, [threshold]);
+  return scrolled;
+}
+
+// Animates the routed page in/out. useOutlet snapshots the current page so the
+// outgoing route can finish its exit while the incoming one enters.
+function AnimatedOutlet() {
   const location = useLocation();
+  const outlet = useOutlet();
+  const reduced = useReducedMotion();
+  return (
+    <AnimatePresence mode="wait" initial={false}>
+      <m.div
+        key={location.pathname}
+        initial={reduced ? false : routeTransition.initial}
+        animate={routeTransition.animate}
+        exit={reduced ? { opacity: 0 } : routeTransition.exit}
+      >
+        {outlet}
+      </m.div>
+    </AnimatePresence>
+  );
+}
+
+export default function Layout() {
   const { jobs } = useApp();
   const { overdue, today } = dueFollowUps(jobs);
   const followUpCount = overdue.length + today.length;
+  const scrolled = useScrolled();
+  const reduced = useReducedMotion();
   return (
     <div className="flex min-h-screen flex-col">
       <RouteScrollReset />
-      <header className="sticky top-0 z-40 border-b border-line/70 bg-paper/90 shadow-sm shadow-ink/[0.03] backdrop-blur-md">
-        <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-3 px-4 py-3">
+      <header
+        className={`sticky top-0 z-40 border-b bg-paper/90 backdrop-blur-md transition-[padding,background-color,box-shadow,border-color] duration-300 ${
+          scrolled
+            ? "border-line/80 shadow-md shadow-ink/[0.06] supports-[backdrop-filter]:bg-paper/80"
+            : "border-line/50 shadow-none"
+        }`}
+      >
+        <div
+          className={`mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-3 px-4 transition-[padding] duration-300 ${
+            scrolled ? "py-2" : "py-3"
+          }`}
+        >
           <Link
             to="/"
             className="group flex min-h-11 items-center gap-2"
@@ -76,22 +123,37 @@ export default function Layout() {
                   key={item.to}
                   to={item.to}
                   end={item.end}
-                  className={({ isActive }) =>
-                    `inline-flex min-h-11 items-center gap-1.5 rounded-full px-3 py-2 text-sm font-medium transition-colors sm:px-4 ${
-                      isActive
-                        ? "bg-ink text-paper"
-                        : "text-ink-soft hover:bg-panel hover:text-ink"
-                    }`
-                  }
+                  className="group relative inline-flex min-h-11 items-center gap-1.5 rounded-full px-3 py-2 text-sm font-medium transition-colors hover:bg-panel/60 sm:px-4"
                 >
-                  {item.label}
-                  {badge > 0 && (
-                    <span
-                      className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-warn px-1 text-[0.65rem] font-bold leading-none text-paper"
-                      aria-label={`${badge} follow-up${badge > 1 ? "s" : ""} need attention`}
-                    >
-                      {badge}
-                    </span>
+                  {({ isActive }) => (
+                    <>
+                      {isActive && (
+                        <m.span
+                          layoutId="nav-active"
+                          className="absolute inset-0 rounded-full bg-ink"
+                          transition={
+                            reduced
+                              ? { duration: 0 }
+                              : { type: "spring", stiffness: 380, damping: 32 }
+                          }
+                        />
+                      )}
+                      <span
+                        className={`relative z-10 ${
+                          isActive ? "text-paper" : "text-ink-soft group-hover:text-ink"
+                        }`}
+                      >
+                        {item.label}
+                      </span>
+                      {badge > 0 && (
+                        <span
+                          className="relative z-10 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-warn px-1 text-[0.65rem] font-bold leading-none text-paper"
+                          aria-label={`${badge} follow-up${badge > 1 ? "s" : ""} need attention`}
+                        >
+                          {badge}
+                        </span>
+                      )}
+                    </>
                   )}
                 </NavLink>
               );
@@ -101,11 +163,9 @@ export default function Layout() {
       </header>
 
       <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8 sm:py-12">
-        {/* re-keyed per route so each page fades in; pure opacity so it never
-            fights the per-section rise transforms inside a page */}
-        <div key={location.pathname} className="page-enter">
-          <Outlet />
-        </div>
+        {/* Motion-driven route transition: each page enters/exits with a short,
+            context-neutral fade+lift. Reduced-motion collapses it to opacity. */}
+        <AnimatedOutlet />
       </main>
 
       <footer className="border-t border-line bg-panel/60">

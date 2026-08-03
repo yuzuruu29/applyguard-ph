@@ -1,0 +1,10 @@
+schema_version: 1
+module_path: frontend_app/public_assets
+title: PWA App Shell & Static Assets
+scope:
+    - public/
+    - index.html
+source_files: []
+depends_on: []
+related_to:
+    - path: frontend_app/app_shell

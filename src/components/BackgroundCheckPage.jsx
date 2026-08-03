@@ -1,7 +1,10 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
+import { m } from "motion/react";
 import { useAuth } from "../auth.jsx";
 import { callAi } from "../lib/ai.js";
+import { useReducedMotion } from "../motion/useMotionConfig.js";
+import { duration, easing } from "../motion/tokens.js";
 import {
   analyzeUrl,
   parseUrl,
@@ -17,6 +20,58 @@ const VERDICT_STYLES = {
   suspicious: { bg: "bg-stop-soft", border: "border-stop/30", text: "text-stop-ink", label: "Suspicious — investigate first", dot: "bg-stop" },
   invalid: { bg: "bg-panel", border: "border-line", text: "text-ink-soft", label: "Invalid URL", dot: "bg-ink-faint" },
 };
+
+// UrlBreakdown — Phase 6 URL analysis. Splits the pasted link into protocol,
+// domain, path, and query so the reader sees exactly which part matters. The
+// domain is highlighted and underlined; the surrounding protocol/path/query are
+// de-emphasised. Segments rule in left-to-right like a marked-up field note.
+// It is display-only and re-parses the same string the heuristic scored, so it
+// can never disagree with the verdict. Reduced motion renders the final state.
+function UrlBreakdown({ input }) {
+  const reduced = useReducedMotion();
+  const parsed = parseUrl(input);
+  if (!parsed) return null;
+
+  const domain = parsed.hostname.replace(/^www\./, "");
+  const subPrefix = parsed.hostname.slice(0, parsed.hostname.length - domain.length);
+  const path = parsed.pathname && parsed.pathname !== "/" ? parsed.pathname : "";
+  const query = parsed.search || "";
+
+  const segments = [
+    { key: "protocol", text: parsed.protocol + "//", role: "dim" },
+    subPrefix ? { key: "sub", text: subPrefix, role: "dim" } : null,
+    { key: "domain", text: domain, role: "domain" },
+    path ? { key: "path", text: path, role: "dim" } : null,
+    query ? { key: "query", text: query, role: "dim" } : null,
+  ].filter(Boolean);
+
+  return (
+    <div className="rounded-2xl border border-line bg-panel/40 p-4 sm:p-5">
+      <p className="eyebrow mb-2.5">Link breakdown</p>
+      <div className="flex flex-wrap items-baseline font-mono text-sm leading-relaxed break-all">
+        {segments.map((seg, i) => (
+          <m.span
+            key={seg.key}
+            initial={reduced ? false : { opacity: 0, x: -6 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: duration.normal, ease: easing.enter, delay: reduced ? 0 : i * 0.07 }}
+            className={
+              seg.role === "domain"
+                ? "relative rounded-md bg-brand/10 px-1.5 font-semibold text-brand-deep marker-underline"
+                : "text-ink-faint"
+            }
+          >
+            {seg.text}
+          </m.span>
+        ))}
+      </div>
+      <p className="mt-3 text-xs text-ink-soft">
+        The <span className="font-semibold text-brand-deep">highlighted domain</span> is who you'd
+        actually be dealing with — the rest of the link can be made to say anything.
+      </p>
+    </div>
+  );
+}
 
 function ScoreGauge({ score, verdict }) {
   const style = VERDICT_STYLES[verdict] || VERDICT_STYLES.invalid;
@@ -307,6 +362,7 @@ export default function BackgroundCheckPage() {
       {heuristicResult && (
         <section className="space-y-3">
           <p className="eyebrow">Quick scan result</p>
+          {heuristicResult.verdict !== "invalid" && <UrlBreakdown input={heuristicResult.meta.input} />}
           <HeuristicResult result={heuristicResult} />
         </section>
       )}

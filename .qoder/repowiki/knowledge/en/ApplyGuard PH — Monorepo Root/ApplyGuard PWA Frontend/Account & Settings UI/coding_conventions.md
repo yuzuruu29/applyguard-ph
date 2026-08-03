@@ -1,0 +1,4 @@
+- User feedback is emitted through the shared `useApp().notify(message, tone)` action rather than local alert/dialog, keeping transient messages centralized in the Toast overlay.
+- UI sections follow a consistent card pattern: a `<section>` wrapped in `elev rounded-3xl border border-line bg-card p-6 sm:p-8` with a `<h2 className="font-display text-xl text-ink">` heading.
+- Form inputs share a single `inputCls` string constant and pair each input with a `<label htmlFor=...>` plus an optional hint paragraph styled with `text-xs text-ink-faint`.
+- Destructure everything needed from `useAuth()` / `useApp()` at the top of the component body instead of accessing the contexts inline, then branch on flags like `loading`, `backendEnabled`, or `!user` to short-circuit render paths.
