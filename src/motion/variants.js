@@ -123,3 +123,27 @@ export const missingItem = {
     transition: { duration: duration.normal, ease: easing.enter },
   },
 };
+
+// ── glass layer ───────────────────────────────────────────────────────────
+// Glass panels enter with a touch of scale as well as lift, so the material
+// reads as coming forward under the light rather than merely sliding up.
+export const glassIn = {
+  hidden: { opacity: 0, y: movement.revealY, scale: 0.985 },
+  show: {
+    opacity: 1,
+    y: 0,
+    scale: 1,
+    transition: { duration: duration.reveal, ease: easing.enter },
+  },
+};
+
+// A single light pass across a featured surface, played once on view — never
+// a repeating pulse, which would turn a highlight into an advertisement.
+// `rest`/`sweep` are absolute x offsets on a band sized to a third of the card.
+export const sheenSweep = {
+  rest: { x: 0 },
+  sweep: {
+    x: "460%",
+    transition: { duration: duration.reveal * 1.7, ease: easing.enter, delay: 0.25 },
+  },
+};

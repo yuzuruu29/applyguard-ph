@@ -44,15 +44,17 @@ function JobListing({ scene, reduced }) {
   if (!showDoc) return null;
 
   return (
-    <div className="relative overflow-hidden rounded-lg border border-line bg-paper/60 p-3">
+    <div className="glass-subtle relative overflow-hidden rounded-lg p-3">
       {/* scan line */}
       {scanning && !reduced && (
         <m.div
           aria-hidden="true"
           className="pointer-events-none absolute inset-x-2 z-10 h-5 rounded-full"
           style={{
+            // Tokenised, not hardcoded: this was the old light-mode teal, which
+            // all but vanished once the surface behind it went dark.
             background:
-              "linear-gradient(180deg, transparent, rgb(11 110 95 / 0.18) 45%, rgb(11 110 95 / 0.45) 50%, rgb(11 110 95 / 0.18) 55%, transparent)",
+              "linear-gradient(180deg, transparent, color-mix(in oklab, var(--color-brand-lift) 22%, transparent) 45%, color-mix(in oklab, var(--color-brand-lift) 62%, transparent) 50%, color-mix(in oklab, var(--color-brand-lift) 22%, transparent) 55%, transparent)",
           }}
           initial={{ opacity: 0, top: "4%" }}
           animate={{ opacity: 1, top: ["4%", "88%"] }}
@@ -220,7 +222,7 @@ function PremiumPanel({ scene, reduced }) {
             initial={reduced ? false : { opacity: 0, y: 6 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: duration.normal, ease: easing.enter, delay: reduced ? 0 : 0.08 * i }}
-            className="flex items-center gap-1.5 rounded-md bg-card px-2 py-1.5 text-[0.6rem] text-ink-soft"
+            className="glass-subtle flex items-center gap-1.5 rounded-md px-2 py-1.5 text-[0.6rem] text-ink-soft"
           >
             <span aria-hidden="true">{f.icon}</span>
             <span>{f.text}</span>
@@ -249,7 +251,7 @@ function TrackerStages({ scene, reduced }) {
             className={`flex items-center gap-1 rounded-full px-2.5 py-1 text-[0.58rem] font-medium ${
               stage.done
                 ? "bg-brand text-paper"
-                : "border border-line bg-card text-ink-faint"
+                : "glass-subtle text-ink-faint"
             }`}
           >
             {stage.done && (
@@ -304,13 +306,13 @@ export default function ProductStoryStage({ scene, reduced }) {
       {/* ── main card ─────────────────────────────────── */}
       {(showListing || showGauge || showPremium || showTracker) && (
         <m.div
-          className="mx-auto max-w-md rounded-2xl border border-line bg-card p-4 shadow-lg shadow-ink/5"
+          className="mx-auto max-w-md glass-subtle rounded-2xl p-4"
           initial={reduced ? { opacity: 1 } : { opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: duration.reveal, ease: easing.enter }}
         >
           {/* card header */}
-          <div className="mb-3 flex items-center justify-between border-b border-line pb-2">
+          <div className="mb-3 flex items-center justify-between border-b border-line/70 pb-2">
             <span className="eyebrow">
               {showTracker ? "Tracker" : showGauge ? "Results" : "Scan"}
             </span>

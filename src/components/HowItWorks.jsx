@@ -6,6 +6,8 @@
 // cards simply stack (path hidden) to stay robust across widths.
 import { m } from "motion/react";
 import { duration, easing } from "../motion/tokens.js";
+import { glassIn } from "../motion/variants.js";
+import { useSpotlight } from "../hooks/useSpotlight.js";
 
 const STEPS = [
   { step: "1", title: "Paste the job post", desc: "Copy the full listing — title, description, pay, contact info." },
@@ -17,15 +19,26 @@ const STEPS = [
 const viewport = { once: true, amount: 0.4 };
 
 export default function HowItWorks() {
+  const spotlight = useSpotlight();
   return (
     <section className="scroll-reveal">
-      <p className="mb-6 text-sm font-semibold text-ink">How it works</p>
+      <p className="eyebrow mb-6">How it works</p>
 
       <div className="relative">
-        {/* the drawn path — sits behind the numbered nodes on sm+ */}
+        {/* The drawn path connecting the numbered nodes on sm+.
+            Geometry, not guesswork: the nodes are 40px circles at the start of
+            each column of a 3-column grid with a 24px gap, so their centres sit
+            at 20px and at (2W + 2·gap)/3 + 20px. The span between them is
+            therefore 66.667% + 16px, and 20px down from the top of the row.
+            The previous inset-x-[12%] / width:76% guess drifted off both ends. */}
         <svg
-          className="pointer-events-none absolute inset-x-[12%] top-4 hidden h-6 sm:block"
-          style={{ width: "76%" }}
+          className="pointer-events-none absolute hidden h-6 sm:block"
+          style={{
+            left: 20,
+            width: "calc(66.6667% + 16px)",
+            top: 20,
+            transform: "translateY(-50%)",
+          }}
           viewBox="0 0 1000 40"
           preserveAspectRatio="none"
           fill="none"
@@ -51,17 +64,11 @@ export default function HowItWorks() {
           variants={{ show: { transition: { staggerChildren: 0.18, delayChildren: 0.35 } } }}
         >
           {STEPS.map((item) => (
-            <m.div
-              key={item.step}
-              variants={{
-                hidden: { opacity: 0, y: 16 },
-                show: { opacity: 1, y: 0, transition: { duration: duration.reveal, ease: easing.enter } },
-              }}
-            >
+            <m.div key={item.step} variants={glassIn}>
               {/* numbered ink circle sits on the path */}
               <div className="mb-4 flex justify-center sm:justify-start">
                 <m.span
-                  className="relative z-10 flex h-9 w-9 items-center justify-center rounded-full bg-brand font-mono text-sm font-bold text-paper shadow-md shadow-brand/30 ring-4 ring-paper"
+                  className="btn-gradient relative z-10 flex h-10 w-10 items-center justify-center rounded-full font-mono text-sm font-bold text-paper ring-4 ring-paper"
                   variants={{
                     hidden: { scale: 0.4, opacity: 0 },
                     show: { scale: 1, opacity: 1, transition: { duration: duration.normal, ease: easing.overshoot } },
@@ -71,7 +78,10 @@ export default function HowItWorks() {
                 </m.span>
               </div>
 
-              <div className="spring-hover elev rounded-2xl border border-line bg-card p-5">
+              <div
+                {...spotlight}
+                className="glass spotlight spring-hover h-full rounded-2xl p-5"
+              >
                 <h3 className="font-display text-lg text-ink">{item.title}</h3>
                 <p className="mt-1.5 text-sm leading-relaxed text-ink-soft">{item.desc}</p>
               </div>

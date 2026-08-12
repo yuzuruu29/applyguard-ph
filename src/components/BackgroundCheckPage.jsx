@@ -1,24 +1,33 @@
-import { useState } from "react";
-import { Link } from "react-router-dom";
+import { useEffect, useState } from "react";
 import { m } from "motion/react";
 import { useAuth } from "../auth.jsx";
+import { useApp } from "../store.jsx";
 import { callAi } from "../lib/ai.js";
 import { useReducedMotion } from "../motion/useMotionConfig.js";
 import { duration, easing } from "../motion/tokens.js";
+import { useCountUp } from "../hooks/useCountUp.js";
+import { useCopy } from "../hooks/useCopy.js";
+import Button from "./ui/Button.jsx";
+import { Field, FieldFrame, fieldInputCls } from "./ui/Field.jsx";
+import { BoltIcon, CheckIcon, ChevronRightIcon, CopyIcon } from "./ui/icons.jsx";
 import {
   analyzeUrl,
   parseUrl,
   canUseFreeCheck,
   getFreeChecksUsed,
   incrementFreeCheck,
+  formatCheckReport,
   DAILY_FREE_LIMIT,
+  VERDICT_LABELS,
 } from "../lib/backgroundcheck.js";
 
+// Verdict wording comes from the lib (shared with the copy-report text) so the
+// card and the clipboard summary can never disagree.
 const VERDICT_STYLES = {
-  credible: { bg: "bg-go-soft", border: "border-go/30", text: "text-go-ink", label: "Looks credible", dot: "bg-go" },
-  caution: { bg: "bg-warn-soft", border: "border-warn/30", text: "text-warn-ink", label: "Proceed with caution", dot: "bg-warn" },
-  suspicious: { bg: "bg-stop-soft", border: "border-stop/30", text: "text-stop-ink", label: "Suspicious — investigate first", dot: "bg-stop" },
-  invalid: { bg: "bg-panel", border: "border-line", text: "text-ink-soft", label: "Invalid URL", dot: "bg-ink-faint" },
+  credible: { bg: "bg-go-soft", border: "border-go/30", text: "text-go-ink", label: VERDICT_LABELS.credible, dot: "bg-go" },
+  caution: { bg: "bg-warn-soft", border: "border-warn/30", text: "text-warn-ink", label: VERDICT_LABELS.caution, dot: "bg-warn" },
+  suspicious: { bg: "bg-stop-soft", border: "border-stop/30", text: "text-stop-ink", label: VERDICT_LABELS.suspicious, dot: "bg-stop" },
+  invalid: { bg: "bg-panel", border: "border-line", text: "text-ink-soft", label: VERDICT_LABELS.invalid, dot: "bg-ink-faint" },
 };
 
 // UrlBreakdown — Phase 6 URL analysis. Splits the pasted link into protocol,
@@ -46,7 +55,7 @@ function UrlBreakdown({ input }) {
   ].filter(Boolean);
 
   return (
-    <div className="rounded-2xl border border-line bg-panel/40 p-4 sm:p-5">
+    <div className="glass-subtle rounded-2xl p-4 sm:p-5">
       <p className="eyebrow mb-2.5">Link breakdown</p>
       <div className="flex flex-wrap items-baseline font-mono text-sm leading-relaxed break-all">
         {segments.map((seg, i) => (
@@ -57,7 +66,7 @@ function UrlBreakdown({ input }) {
             transition={{ duration: duration.normal, ease: easing.enter, delay: reduced ? 0 : i * 0.07 }}
             className={
               seg.role === "domain"
-                ? "relative rounded-md bg-brand/10 px-1.5 font-semibold text-brand-deep marker-underline"
+                ? "relative rounded-md border border-brand/25 bg-brand/12 px-1.5 font-semibold text-brand-lift"
                 : "text-ink-faint"
             }
           >
@@ -66,7 +75,7 @@ function UrlBreakdown({ input }) {
         ))}
       </div>
       <p className="mt-3 text-xs text-ink-soft">
-        The <span className="font-semibold text-brand-deep">highlighted domain</span> is who you'd
+        The <span className="font-semibold text-brand-lift">highlighted domain</span> is who you'd
         actually be dealing with — the rest of the link can be made to say anything.
       </p>
     </div>
@@ -74,16 +83,30 @@ function UrlBreakdown({ input }) {
 }
 
 function ScoreGauge({ score, verdict }) {
-  const style = VERDICT_STYLES[verdict] || VERDICT_STYLES.invalid;
   const r = 44;
   const c = 2 * Math.PI * r;
-  const offset = c * (1 - score / 100);
+  const target = c * (1 - score / 100);
+  // Fill from empty on mount, matching the result page's score ring. The
+  // number counts up alongside; reduced motion shows both instantly.
+  const [offset, setOffset] = useState(c);
+  useEffect(() => {
+    const id = requestAnimationFrame(() => setOffset(target));
+    return () => cancelAnimationFrame(id);
+  }, [target]);
+  const displayScore = useCountUp(score, 1000);
   const strokeColor = verdict === "credible" ? "var(--color-go)" : verdict === "caution" ? "var(--color-warn)" : "var(--color-stop)";
 
   return (
     <div className="relative h-28 w-28 shrink-0">
-      <svg viewBox="0 0 100 100" className="h-full w-full -rotate-90">
+      <svg viewBox="0 0 100 100" className="h-full w-full -rotate-90" aria-hidden="true">
         <circle cx="50" cy="50" r={r} fill="none" stroke="var(--color-line)" strokeWidth="8" />
+        {/* blurred twin under the crisp arc reads as a glow */}
+        <circle
+          cx="50" cy="50" r={r} fill="none"
+          stroke={strokeColor} strokeWidth="8" strokeLinecap="round"
+          strokeDasharray={c} strokeDashoffset={offset}
+          className="ring-fill" opacity="0.45" style={{ filter: "blur(6px)" }}
+        />
         <circle
           cx="50" cy="50" r={r} fill="none"
           stroke={strokeColor} strokeWidth="8" strokeLinecap="round"
@@ -92,7 +115,7 @@ function ScoreGauge({ score, verdict }) {
         />
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <span className="font-mono text-2xl font-semibold text-ink">{score}</span>
+        <span className="font-mono text-2xl font-semibold text-ink">{displayScore}</span>
         <span className="text-[0.6rem] font-medium tracking-wide text-ink-faint">/ 100</span>
       </div>
     </div>
@@ -103,7 +126,7 @@ function HeuristicResult({ result }) {
   const style = VERDICT_STYLES[result.verdict] || VERDICT_STYLES.invalid;
 
   return (
-    <div className={`rise rounded-2xl border ${style.border} ${style.bg} p-5 sm:p-6`}>
+    <div className={`rise glass rounded-2xl ${style.border} ${style.bg} p-5 sm:p-6`}>
       <div className="flex flex-wrap items-center gap-5">
         <ScoreGauge score={result.score} verdict={result.verdict} />
         <div className="min-w-0 flex-1">
@@ -113,7 +136,7 @@ function HeuristicResult({ result }) {
           </div>
           <p className="mt-1 truncate font-mono text-xs text-ink-faint">{result.meta.domain || result.meta.input}</p>
           {result.meta.isKnownPlatform && (
-            <p className="mt-1.5 inline-flex items-center gap-1 rounded-full bg-go-soft px-2.5 py-0.5 text-xs font-medium text-go-ink">
+            <p className="mt-1.5 inline-flex items-center gap-1 rounded-full border border-go/30 bg-go-soft px-2.5 py-0.5 text-xs font-medium text-go-ink">
               <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
               Known platform
             </p>
@@ -158,7 +181,9 @@ function HeuristicResult({ result }) {
 }
 
 export default function BackgroundCheckPage() {
-  const { user, tier, usageCount, aiCap, refreshEntitlement } = useAuth();
+  const { tier, usageCount, aiCap, refreshEntitlement } = useAuth();
+  const { notify } = useApp();
+  const { copied: reportCopied, copy: copyReport } = useCopy();
 
   const [url, setUrl] = useState("");
   const [companyName, setCompanyName] = useState("");
@@ -171,6 +196,15 @@ export default function BackgroundCheckPage() {
 
   const remaining = DAILY_FREE_LIMIT - checksUsed;
   const aiRemaining = Math.max(0, aiCap - usageCount);
+
+  const handleCopyReport = async () => {
+    if (!heuristicResult) return;
+    try {
+      await copyReport(formatCheckReport(heuristicResult));
+    } catch {
+      notify("Couldn't copy the report. Try again.", "error");
+    }
+  };
 
   const handleQuickCheck = () => {
     setError("");
@@ -215,25 +249,24 @@ export default function BackgroundCheckPage() {
   return (
     <div className="space-y-8">
       {/* Header */}
-      <section className="elev relative overflow-hidden rounded-3xl border border-line bg-card px-6 py-10 sm:px-10">
-        <div className="pointer-events-none absolute -right-12 -top-12 h-52 w-52 rounded-full bg-brand/[0.05]" />
-        <div className="pointer-events-none absolute left-5 top-5 h-4 w-4 border-l-2 border-t-2 border-line" aria-hidden="true" />
-        <div className="pointer-events-none absolute right-5 top-5 h-4 w-4 border-r-2 border-t-2 border-line" aria-hidden="true" />
+      <section className="glass-strong gradient-border relative overflow-hidden rounded-3xl px-6 py-10 sm:px-10">
+        <div className="pointer-events-none absolute left-5 top-5 h-4 w-4 border-l-2 border-t-2 border-brand/30" aria-hidden="true" />
+        <div className="pointer-events-none absolute right-5 top-5 h-4 w-4 border-r-2 border-t-2 border-brand/30" aria-hidden="true" />
         <div className="relative max-w-2xl">
           <p className="eyebrow rise">Company & link check</p>
           <h1 className="rise d1 mt-3 font-display text-3xl leading-tight tracking-tight text-ink sm:text-4xl">
-            Background check a <span className="marker-underline">company or link</span>
+            Background check a <span className="text-gradient">company or link</span>
           </h1>
           <p className="rise d2 mt-4 text-lg leading-relaxed text-ink-soft">
             Paste a job-posting URL or company website. Get an instant credibility scan for free,
             or unlock the full AI-powered deep check with Premium.
           </p>
           <div className="rise d3 mt-5 flex flex-wrap gap-3 text-sm">
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-go-soft px-3 py-1.5 font-medium text-go-ink">
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-go/30 bg-go-soft px-3 py-1.5 font-medium text-go-ink">
               <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
               Free: instant URL scan ({DAILY_FREE_LIMIT}/day)
             </span>
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-brand/10 px-3 py-1.5 font-medium text-brand-deep">
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-brand/30 bg-brand/10 px-3 py-1.5 font-medium text-brand-lift">
               <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
               Premium: AI deep credibility report
             </span>
@@ -242,17 +275,13 @@ export default function BackgroundCheckPage() {
       </section>
 
       {/* Input form */}
-      <section className="elev rounded-3xl border border-line bg-card p-5 sm:p-7">
+      <section className="glass rounded-3xl p-5 sm:p-7">
         <div className="space-y-5">
           {/* URL input */}
-          <div>
-            <label htmlFor="bg-url" className="mb-1.5 block text-sm font-medium text-ink">
-              Company or job-posting URL
-            </label>
-            <div className="field-frame flex rounded-xl border border-line bg-card">
-              <span className="field-accent" aria-hidden="true" />
+          <Field id="bg-url" label="Company or job-posting URL">
+            <FieldFrame>
               <span className="flex items-center pl-3.5 text-ink-faint">
-                <svg className="h-4.5 w-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5"><path strokeLinecap="round" strokeLinejoin="round" d="M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m13.35-.622l1.757-1.757a4.5 4.5 0 00-6.364-6.364l-4.5 4.5a4.5 4.5 0 001.242 7.244" /></svg>
+                <svg className="h-4.5 w-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5" aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" d="M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m13.35-.622l1.757-1.757a4.5 4.5 0 00-6.364-6.364l-4.5 4.5a4.5 4.5 0 001.242 7.244" /></svg>
               </span>
               <input
                 id="bg-url"
@@ -263,77 +292,67 @@ export default function BackgroundCheckPage() {
                 className="field-input w-full rounded-xl bg-transparent px-3 py-3 text-ink placeholder:text-ink-faint focus:outline-none"
                 onKeyDown={(e) => { if (e.key === "Enter") handleQuickCheck(); }}
               />
-            </div>
-          </div>
+            </FieldFrame>
+          </Field>
 
           {/* Optional fields for AI check */}
           <details className="group">
             <summary className="flex min-h-11 cursor-pointer items-center gap-2 text-sm font-medium text-ink-soft hover:text-ink list-none">
-              <span className="text-brand transition-transform duration-200 group-open:rotate-90" aria-hidden="true">▶</span>
+              <ChevronRightIcon
+                className="h-3.5 w-3.5 text-brand transition-transform duration-200 group-open:rotate-90"
+                strokeWidth={2.5}
+              />
               Add context for the AI deep check (optional)
             </summary>
             <div className="mt-4 grid gap-4 sm:grid-cols-2">
-              <div>
-                <label htmlFor="bg-company" className="mb-1.5 block text-sm font-medium text-ink">Company name</label>
-                <div className="field-frame flex rounded-xl border border-line bg-card">
-                  <span className="field-accent" aria-hidden="true" />
+              <Field id="bg-company" label="Company name">
+                <FieldFrame>
                   <input
                     id="bg-company"
                     type="text"
                     value={companyName}
                     onChange={(e) => setCompanyName(e.target.value)}
-                    placeholder="e.g. Acme Remote Solutions"
-                    className="field-input w-full rounded-xl bg-transparent px-3.5 py-2.5 text-ink placeholder:text-ink-faint focus:outline-none"
+                    placeholder="e.g. Northgate Outsourcing Inc."
+                    className={fieldInputCls}
                   />
-                </div>
-              </div>
-              <div>
-                <label htmlFor="bg-context" className="mb-1.5 block text-sm font-medium text-ink">
-                  What do they claim? <span className="font-normal text-ink-faint">optional</span>
-                </label>
-                <div className="field-frame flex rounded-xl border border-line bg-card">
-                  <span className="field-accent" aria-hidden="true" />
+                </FieldFrame>
+              </Field>
+              <Field id="bg-context" label="What do they claim?" hint="optional">
+                <FieldFrame>
                   <input
                     id="bg-context"
                     type="text"
                     value={context}
                     onChange={(e) => setContext(e.target.value)}
                     placeholder="e.g. $500/day data entry, no experience"
-                    className="field-input w-full rounded-xl bg-transparent px-3.5 py-2.5 text-ink placeholder:text-ink-faint focus:outline-none"
+                    className={fieldInputCls}
                   />
-                </div>
-              </div>
+                </FieldFrame>
+              </Field>
             </div>
           </details>
 
           {/* Action buttons */}
           <div className="flex flex-wrap items-center gap-3">
-            <button
-              type="button"
-              onClick={handleQuickCheck}
-              disabled={remaining <= 0}
-              className="rounded-full bg-brand px-6 py-3 font-semibold text-paper shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:bg-brand-deep hover:shadow-md active:translate-y-0 active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none"
-            >
+            <Button size="lg" onClick={handleQuickCheck} disabled={remaining <= 0}>
               Quick scan — free
-            </button>
+            </Button>
 
             {tier === "premium" ? (
-              <button
-                type="button"
+              <Button
+                variant="outline"
+                size="lg"
                 onClick={handleAiCheck}
-                disabled={aiLoading || aiRemaining <= 0}
-                className="rounded-full border-2 border-brand px-6 py-3 font-semibold text-brand transition-all duration-200 hover:-translate-y-0.5 hover:bg-brand/5 active:translate-y-0 disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none"
+                loading={aiLoading}
+                disabled={aiRemaining <= 0}
               >
                 {aiLoading ? "Analyzing…" : "AI deep check"}
-              </button>
+              </Button>
             ) : (
-              <Link
-                to="/offers"
-                className="inline-flex items-center gap-1.5 rounded-full border border-brand/40 px-5 py-3 text-sm font-medium text-brand transition-colors hover:bg-brand/5"
-              >
-                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+              <Button variant="outline" size="md" to="/offers" className="border-brand/40 font-medium">
+                <BoltIcon className="h-4 w-4" />
                 Unlock AI deep check — Premium
-              </Link>
+              </Button>
             )}
           </div>
 
@@ -351,7 +370,7 @@ export default function BackgroundCheckPage() {
 
           {/* Error */}
           {error && (
-            <div className="rounded-2xl border border-stop/30 bg-stop-soft p-4">
+            <div className="rounded-2xl border border-stop/40 bg-stop-soft p-4">
               <p className="text-sm font-medium text-stop-ink">{error}</p>
             </div>
           )}
@@ -361,7 +380,24 @@ export default function BackgroundCheckPage() {
       {/* Heuristic result */}
       {heuristicResult && (
         <section className="space-y-3">
-          <p className="eyebrow">Quick scan result</p>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <p className="eyebrow">Quick scan result</p>
+            {heuristicResult.verdict !== "invalid" && (
+              <Button
+                variant={reportCopied ? "success" : "soft"}
+                size="sm"
+                onClick={handleCopyReport}
+                aria-live="polite"
+              >
+                {reportCopied ? (
+                  <CheckIcon className="h-3.5 w-3.5" strokeWidth={2.5} />
+                ) : (
+                  <CopyIcon className="h-3.5 w-3.5" />
+                )}
+                {reportCopied ? "Copied" : "Copy report"}
+              </Button>
+            )}
+          </div>
           {heuristicResult.verdict !== "invalid" && <UrlBreakdown input={heuristicResult.meta.input} />}
           <HeuristicResult result={heuristicResult} />
         </section>
@@ -369,15 +405,15 @@ export default function BackgroundCheckPage() {
 
       {/* AI result */}
       {aiLoading && (
-        <section className="elev rounded-3xl border border-line bg-card p-6">
+        <section className="glass rounded-3xl p-6">
           <div className="flex items-center gap-3">
             <span className="pulse-dot h-3 w-3 rounded-full bg-brand" aria-hidden="true" />
             <p className="text-sm font-medium text-ink-soft">Running AI credibility analysis…</p>
           </div>
           <div className="mt-4 space-y-2">
-            <div className="h-3 w-3/4 animate-pulse rounded-full bg-panel" />
-            <div className="h-3 w-1/2 animate-pulse rounded-full bg-panel" />
-            <div className="h-3 w-2/3 animate-pulse rounded-full bg-panel" />
+            <div className="shimmer h-3 w-3/4 rounded-full bg-panel" />
+            <div className="shimmer h-3 w-1/2 rounded-full bg-panel" />
+            <div className="shimmer h-3 w-2/3 rounded-full bg-panel" />
           </div>
         </section>
       )}
@@ -385,9 +421,9 @@ export default function BackgroundCheckPage() {
       {aiResult && (
         <section className="space-y-3">
           <p className="eyebrow">AI deep check report</p>
-          <div className="elev rise rounded-3xl border border-brand/20 bg-card p-6 sm:p-8">
+          <div className="rise glass gradient-border rounded-3xl p-6 sm:p-8">
             <div className="mb-4 flex items-center gap-2">
-              <svg className="h-5 w-5 text-brand" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M9.75 3.104v5.714a2.25 2.25 0 01-.659 1.591L5 14.5M9.75 3.104c-.251.023-.501.05-.75.082m.75-.082a24.301 24.301 0 014.5 0m0 0v5.714c0 .597.237 1.17.659 1.591L19.8 15.3M14.25 3.104c.251.023.501.05.75.082M19.8 15.3l-1.57.393A9.065 9.065 0 0112 15a9.065 9.065 0 00-6.23.693L5 14.5m14.8.8l1.402 1.402c1.232 1.232.65 3.318-1.067 3.611A48.309 48.309 0 0112 21c-2.773 0-5.491-.235-8.135-.687-1.718-.293-2.3-2.379-1.067-3.61L5 14.5" /></svg>
+              <svg className="h-5 w-5 text-brand-lift" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M9.75 3.104v5.714a2.25 2.25 0 01-.659 1.591L5 14.5M9.75 3.104c-.251.023-.501.05-.75.082m.75-.082a24.301 24.301 0 014.5 0m0 0v5.714c0 .597.237 1.17.659 1.591L19.8 15.3M14.25 3.104c.251.023.501.05.75.082M19.8 15.3l-1.57.393A9.065 9.065 0 0112 15a9.065 9.065 0 00-6.23.693L5 14.5m14.8.8l1.402 1.402c1.232 1.232.65 3.318-1.067 3.611A48.309 48.309 0 0112 21c-2.773 0-5.491-.235-8.135-.687-1.718-.293-2.3-2.379-1.067-3.61L5 14.5" /></svg>
               <h3 className="font-display text-lg text-ink">AI Credibility Report</h3>
             </div>
             <div className="prose prose-sm max-w-none whitespace-pre-wrap font-sans leading-relaxed text-ink">
@@ -398,7 +434,7 @@ export default function BackgroundCheckPage() {
       )}
 
       {/* Info section */}
-      <section className="rounded-3xl border border-line bg-panel/50 p-6 sm:p-8">
+      <section className="glass-subtle rounded-3xl p-6 sm:p-8">
         <h2 className="font-display text-lg text-ink">What we check</h2>
         <div className="mt-4 grid gap-5 sm:grid-cols-2">
           <div>

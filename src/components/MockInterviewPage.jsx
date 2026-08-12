@@ -6,6 +6,8 @@ import { useApp } from "../store.jsx";
 import { supabase } from "../lib/supabase.js";
 import { useReducedMotion } from "../motion/useMotionConfig.js";
 import { duration, easing } from "../motion/tokens.js";
+import Button from "./ui/Button.jsx";
+import { MicrophoneIcon, StopSquareIcon } from "./ui/icons.jsx";
 
 export default function MockInterviewPage() {
   const { user, tier } = useAuth();
@@ -185,7 +187,7 @@ export default function MockInterviewPage() {
       </header>
 
       {!hasStarted ? (
-        <section className="rounded-3xl border border-line bg-card p-6">
+        <section className="glass rounded-3xl p-6">
           <h2 className="font-display text-xl text-ink mb-4">Interview Setup</h2>
           <div className="space-y-4">
             <div>
@@ -208,12 +210,9 @@ export default function MockInterviewPage() {
                 className="mt-1 w-full rounded-xl border border-line bg-paper px-4 py-2 outline-none focus:border-brand"
               />
             </div>
-            <button 
-              onClick={handleStartInterview}
-              className="w-full rounded-full bg-brand px-6 py-3 font-semibold text-paper hover:bg-brand-deep transition-all"
-            >
+            <Button size="lg" className="w-full" onClick={handleStartInterview}>
               Start Interview (Requires Camera & Mic)
-            </button>
+            </Button>
           </div>
         </section>
       ) : (
@@ -235,21 +234,28 @@ export default function MockInterviewPage() {
             </div>
             {/* User Recording Overlay */}
             <div className="absolute bottom-6 left-1/2 -translate-x-1/2">
-              <button 
+              <button
+                type="button"
                 onClick={toggleRecording}
                 disabled={isProcessing}
-                className={`flex h-16 w-16 items-center justify-center rounded-full text-2xl shadow-xl transition-all ${
-                  isProcessing ? 'bg-gray-500 opacity-50 cursor-not-allowed' :
-                  isRecording ? 'bg-stop text-white animate-pulse' : 'bg-paper text-ink hover:scale-105'
+                aria-label={isRecording ? "Stop recording your answer" : "Start recording your answer"}
+                aria-pressed={isRecording}
+                className={`flex h-16 w-16 items-center justify-center rounded-full shadow-xl transition-all duration-200 ${
+                  isProcessing ? 'bg-ink-faint opacity-50 cursor-not-allowed' :
+                  isRecording ? 'bg-stop text-paper animate-pulse' : 'bg-paper text-ink hover:scale-105 active:scale-95'
                 }`}
               >
-                {isRecording ? "⏹️" : "🎙️"}
+                {isRecording ? (
+                  <StopSquareIcon className="h-7 w-7" strokeWidth={1.8} />
+                ) : (
+                  <MicrophoneIcon className="h-7 w-7" strokeWidth={1.8} />
+                )}
               </button>
             </div>
           </div>
 
           {/* Transcript / Conversation */}
-          <div className="rounded-3xl border border-line bg-card p-6 h-64 overflow-y-auto space-y-4">
+          <div className="glass rounded-3xl p-6 h-64 overflow-y-auto space-y-4">
             <AnimatePresence initial={false}>
               {messages.filter((msg) => msg.role === "assistant" || (msg.role === "user" && msg !== messages[0])).map((msg, i) => (
                 <m.div

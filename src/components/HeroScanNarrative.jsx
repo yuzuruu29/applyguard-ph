@@ -49,7 +49,7 @@ function HeroMobile() {
           Done
         </span>
       </div>
-      <div className="relative overflow-hidden rounded-xl border border-line bg-paper/60 p-3">
+      <div className="glass-subtle relative overflow-hidden rounded-xl p-3">
         <ul className="space-y-2 text-[0.78rem] leading-snug">
           {LISTING.map((row) => {
             const s = toneStyles[row.tone];
@@ -158,10 +158,10 @@ export default function HeroScanNarrative() {
           onPointerMove={handlePointerMove}
           onPointerLeave={handlePointerLeave}
           style={tiltEnabled ? { rotateX, rotateY, transformStyle: "preserve-3d" } : undefined}
-          className="relative w-72 rounded-2xl border border-line bg-card p-5 shadow-xl shadow-ink/10"
+          className="glass-strong gradient-border relative w-72 rounded-2xl p-5"
         >
           {/* header: what the tool is doing */}
-          <div className="mb-3 flex items-center justify-between border-b border-line pb-2.5">
+          <div className="mb-3 flex items-center justify-between border-b border-line/70 pb-2.5">
             <span className="text-xs font-semibold tracking-wider text-ink-faint uppercase">Live scan</span>
             <span className="flex items-center gap-1.5 text-[0.65rem] font-medium text-ink-faint">
               <span className={`h-1.5 w-1.5 rounded-full ${scanning ? "bg-brand pulse-dot" : "bg-line"}`} />
@@ -170,7 +170,7 @@ export default function HeroScanNarrative() {
           </div>
 
           {/* the document being scanned */}
-          <div className="relative overflow-hidden rounded-lg border border-line bg-paper/60 p-3">
+          <div className="glass-subtle relative overflow-hidden rounded-lg p-3">
             {/* scan line sweeps top → bottom during SCAN */}
             {!reduced && (
               <m.div
@@ -178,7 +178,7 @@ export default function HeroScanNarrative() {
                 className="pointer-events-none absolute inset-x-2 z-10 h-6 rounded-full"
                 style={{
                   background:
-                    "linear-gradient(180deg, transparent, rgb(11 110 95 / 0.18) 45%, rgb(11 110 95 / 0.45) 50%, rgb(11 110 95 / 0.18) 55%, transparent)",
+                    "linear-gradient(180deg, transparent, color-mix(in oklab, var(--color-brand-lift) 22%, transparent) 45%, color-mix(in oklab, var(--color-brand-lift) 62%, transparent) 50%, color-mix(in oklab, var(--color-brand-lift) 22%, transparent) 55%, transparent)",
                   top: 0,
                 }}
                 initial={{ opacity: 0, top: "4%" }}

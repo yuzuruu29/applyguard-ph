@@ -6,7 +6,7 @@
 // guard the "animate transform/opacity only" performance rule.
 
 import { describe, it, expect } from "vitest";
-import { duration, easing, movement } from "./tokens.js";
+import { ambientScroll, duration, easing, movement } from "./tokens.js";
 import {
   revealUp,
   revealSection,
@@ -19,6 +19,8 @@ import {
   flagHard,
   flagSoft,
   missingItem,
+  glassIn,
+  sheenSweep,
 } from "./variants.js";
 
 // Properties Motion can animate cheaply on the compositor. Everything else
@@ -65,6 +67,8 @@ const ALL_VARIANTS = {
   flagHard,
   flagSoft,
   missingItem,
+  glassIn,
+  sheenSweep,
 };
 
 describe("motion tokens", () => {
@@ -126,6 +130,31 @@ describe("route transition (Phase 12 spec)", () => {
   it("stays within the 220–320ms route-transition window", () => {
     expect(routeTransition.animate.transition.duration).toBeGreaterThanOrEqual(0.22);
     expect(routeTransition.animate.transition.duration).toBeLessThanOrEqual(0.32);
+  });
+});
+
+describe("glass layer motion", () => {
+  it("keeps the glass card entrance inside the reveal travel limit", () => {
+    expect(glassIn.hidden.y).toBeLessThanOrEqual(movement.sectionRevealY);
+    expect(glassIn.hidden.scale).toBeGreaterThanOrEqual(0.97);
+    expect(glassIn.show.scale).toBe(1);
+  });
+
+  it("sweeps the featured sheen once, with no repeat", () => {
+    expect(sheenSweep.sweep.transition.repeat).toBeUndefined();
+    expect(sheenSweep.rest.x).toBe(0);
+  });
+
+  it("caps the aurora parallax so the backdrop never outruns the page", () => {
+    expect(Math.abs(ambientScroll.parallaxShift)).toBeLessThan(ambientScroll.parallaxRange * 0.2);
+    expect(ambientScroll.parallaxRange).toBeGreaterThan(0);
+  });
+
+  it("overhangs the aurora layer further than the parallax can move it", () => {
+    // The layer is clipped to its own box. If it can travel further than it
+    // overhangs the viewport, the bottom edge scrolls into view as a hard seam
+    // across the glow — which is exactly what shipped before this guard.
+    expect(ambientScroll.parallaxSlack).toBeGreaterThan(Math.abs(ambientScroll.parallaxShift));
   });
 });
 

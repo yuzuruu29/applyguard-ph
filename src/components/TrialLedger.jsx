@@ -54,7 +54,7 @@ export default function TrialLedger({ used = {} }) {
   const reduced = useReducedMotion();
 
   return (
-    <div className="rounded-2xl border border-line bg-card/70 p-4">
+    <div className="glass-subtle rounded-2xl p-4">
       <p className="eyebrow mb-3">7-day trial allowance</p>
       <dl className="space-y-2.5">
         {ROWS.map((row) => {

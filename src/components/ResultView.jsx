@@ -5,11 +5,13 @@ import { useApp } from "../store.jsx";
 import { VERDICT_TONE, RISK_TONE } from "../lib/tone.js";
 import { JOB_STATUSES } from "../lib/storage.js";
 import { useCountUp } from "../hooks/useCountUp.js";
+import { useCopy } from "../hooks/useCopy.js";
 import { useReducedMotion } from "../motion/useMotionConfig.js";
 import { flagParent, flagHard, flagSoft, missingItem } from "../motion/variants.js";
 import { duration, easing } from "../motion/tokens.js";
-import { copyToClipboard } from "../lib/clipboard.js";
 import { shareSummary } from "../lib/share.js";
+import Button from "./ui/Button.jsx";
+import { CheckIcon, CopyIcon } from "./ui/icons.jsx";
 import AiAssistant from "./AiAssistant.jsx";
 
 // whileInView plays the risk-card story once as the section scrolls in.
@@ -33,6 +35,23 @@ function ScoreRing({ score, toneClass }) {
     <div className="relative h-32 w-32 shrink-0">
       <svg viewBox="0 0 120 120" className="h-full w-full -rotate-90">
         <circle cx="60" cy="60" r={r} fill="none" stroke="var(--color-line)" strokeWidth="10" />
+        {/* the lit arc: a blurred copy under the crisp stroke reads as a glow
+            without needing a filter on the whole SVG */}
+        <circle
+          cx="60"
+          cy="60"
+          r={r}
+          fill="none"
+          className={`ring-fill ${toneClass}`}
+          stroke="currentColor"
+          strokeWidth="10"
+          strokeLinecap="round"
+          strokeDasharray={c}
+          strokeDashoffset={offset}
+          opacity="0.45"
+          style={{ filter: "blur(7px)" }}
+          aria-hidden="true"
+        />
         <circle
           cx="60"
           cy="60"
@@ -64,8 +83,11 @@ function BreakdownBar({ label, value, max }) {
           {value}/{max}
         </span>
       </div>
-      <div className="h-2 w-full overflow-hidden rounded-full bg-panel">
-        <div className="h-full rounded-full bg-brand" style={{ width: `${pct}%` }} />
+      <div className="h-2 w-full overflow-hidden rounded-full bg-panel/80">
+        <div
+          className="btn-gradient h-full rounded-full transition-[width] duration-700 ease-out"
+          style={{ width: `${pct}%` }}
+        />
       </div>
     </div>
   );
@@ -74,8 +96,8 @@ function BreakdownBar({ label, value, max }) {
 function FlagRow({ flag, tone }) {
   const styles =
     tone === "hard"
-      ? "border-stop/30 bg-stop-soft"
-      : "border-warn/30 bg-warn-soft";
+      ? "border-stop/35 bg-stop-soft shadow-[0_0_28px_-16px_var(--color-stop)]"
+      : "border-warn/35 bg-warn-soft shadow-[0_0_28px_-18px_var(--color-warn)]";
   const dot = tone === "hard" ? "bg-stop" : "bg-warn";
   const labelColor = tone === "hard" ? "text-stop-ink" : "text-warn-ink";
   return (
@@ -105,7 +127,7 @@ function StatusTimeline({ status }) {
   const n = JOB_STATUSES.length;
   const frac = n > 1 ? idx / (n - 1) : 0;
   return (
-    <section className="elev rounded-3xl border border-line bg-card p-5 sm:p-6">
+    <section className="glass rounded-3xl p-5 sm:p-6">
       <p className="eyebrow mb-5">Application progress</p>
       <div className="relative">
         {/* Base rail + the brand line that grows to the current stage */}
@@ -127,7 +149,7 @@ function StatusTimeline({ status }) {
               <li key={s} className="flex flex-col items-center gap-2">
                 <m.span
                   className={`h-3.5 w-3.5 rounded-full border-2 ${
-                    done ? "border-brand bg-brand" : "border-line bg-card"
+                    done ? "border-brand bg-brand shadow-[0_0_12px_-2px_var(--color-brand)]" : "border-line bg-panel"
                   }`}
                   initial={reduced ? false : { scale: 0 }}
                   animate={reduced ? { scale: current ? 1.15 : 1 } : undefined}
@@ -150,18 +172,15 @@ function StatusTimeline({ status }) {
 
 function NoResult() {
   return (
-    <div className="rounded-3xl border border-line bg-card p-10 text-center">
-      <p className="font-display text-2xl text-ink">No result to show yet</p>
+    <div className="glass rounded-3xl p-10 text-center">
+      <p className="font-display text-2xl font-semibold text-ink">No result to show yet</p>
       <p className="mx-auto mt-2 max-w-md text-ink-soft">
         Scans aren't kept after you leave the page unless you save them. Run a fresh check to
         see a verdict here.
       </p>
-      <Link
-        to="/"
-        className="mt-6 inline-block rounded-full bg-brand px-6 py-3 font-semibold text-paper hover:bg-brand-deep"
-      >
+      <Button to="/" size="lg" className="mt-6">
         Scan a job post
-      </Link>
+      </Button>
     </div>
   );
 }
@@ -178,8 +197,8 @@ export default function ResultView() {
     ? {}
     : { variants: flagParent, initial: "hidden", whileInView: "show", viewport: flagViewport };
 
-  const [copied, setCopied] = useState(false);
-  const [summaryCopied, setSummaryCopied] = useState(false);
+  const { copied, copy: copyPromptText } = useCopy();
+  const { copied: summaryCopied, copy: copySummaryText } = useCopy();
 
   const isPreview = id === "preview";
   const data = isPreview ? result : getJob(id);
@@ -211,36 +230,20 @@ export default function ResultView() {
     navigate(`/result/${newId}`);
   };
 
-  const markCopied = () => {
-    notify("Prompt copied. Paste it into your AI.", "success");
-    setCopied(true);
-    setTimeout(() => setCopied(false), 1900);
-  };
-
+  // lib/clipboard handles the execCommand fallback; the hook handles the
+  // transient "Copied" window. This used to be three hand-rolled copies.
   const copyPrompt = async () => {
     try {
-      await navigator.clipboard.writeText(data.prompt);
-      markCopied();
+      await copyPromptText(data.prompt);
+      notify("Prompt copied. Paste it into your AI.", "success");
     } catch {
-      const ta = document.createElement("textarea");
-      ta.value = data.prompt;
-      document.body.appendChild(ta);
-      ta.select();
-      try {
-        document.execCommand("copy");
-        markCopied();
-      } catch {
-        notify("Couldn't copy automatically. Select the text and copy it.", "error");
-      }
-      document.body.removeChild(ta);
+      notify("Couldn't copy automatically. Select the text and copy it.", "error");
     }
   };
 
   const copySummary = async () => {
     try {
-      await copyToClipboard(shareSummary(data));
-      setSummaryCopied(true);
-      setTimeout(() => setSummaryCopied(false), 1900);
+      await copySummaryText(shareSummary(data));
     } catch {
       notify("Couldn't copy verdict summary.", "error");
     }
@@ -251,26 +254,28 @@ export default function ResultView() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <Link
           to="/"
-          className="inline-flex min-h-11 items-center text-sm font-medium text-brand hover:text-brand-deep"
+          className="inline-flex min-h-11 items-center text-sm font-medium text-brand-lift transition-colors hover:text-brand"
         >
           ← Scan another
         </Link>
         {!isPreview && (
-          <span className="rounded-full bg-go-soft px-3 py-1 text-xs font-semibold text-go-ink">
+          <span className="rounded-full border border-go/30 bg-go-soft px-3 py-1 text-xs font-semibold text-go-ink">
             Saved to tracker
           </span>
         )}
-        <button
-          type="button"
+        <Button
+          variant={summaryCopied ? "success" : "soft"}
           onClick={copySummary}
-          className={`inline-flex min-h-11 items-center gap-2 rounded-full px-4 py-2 text-sm font-medium transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.99] focus-visible:outline-none ${
-            summaryCopied ? "bg-go text-paper" : "bg-panel text-ink-soft hover:bg-ink hover:text-paper"
-          }`}
           aria-live="polite"
+          className="font-medium"
         >
-          <span aria-hidden="true">{summaryCopied ? "✓" : "⧉"}</span>
+          {summaryCopied ? (
+            <CheckIcon className="h-4 w-4" strokeWidth={2.5} />
+          ) : (
+            <CopyIcon className="h-4 w-4" />
+          )}
           {summaryCopied ? "Copied" : "Copy verdict summary"}
-        </button>
+        </Button>
       </div>
 
       {/* ── Verdict + score ──────────────────────────────────────── */}
@@ -278,7 +283,7 @@ export default function ResultView() {
           surface, picking up the handoff from the scan form's narrowing
           document. Inner stamp/settle sequencing then plays afterward. */}
       <m.section
-        className="elev rounded-3xl border border-line bg-card p-6 sm:p-8"
+        className="glass-strong gradient-border rounded-3xl p-6 sm:p-8"
         initial={reduced ? false : { opacity: 0, scale: 0.97, y: 12 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         transition={{ duration: duration.deliberate, ease: easing.enter }}
@@ -309,7 +314,7 @@ export default function ResultView() {
       {!isPreview && <StatusTimeline status={data.status} />}
 
       {/* ── Score breakdown ──────────────────────────────────────── */}
-      <section className="rise d2 elev rounded-3xl border border-line bg-card p-6 sm:p-8">
+      <section className="rise d2 glass rounded-3xl p-6 sm:p-8">
         <h2 className="font-display text-xl text-ink">Why this score</h2>
         <p className="mt-1 text-sm text-ink-soft">
           Fit is built from four parts that add up to 100.
@@ -342,10 +347,10 @@ export default function ResultView() {
       </section>
 
       {/* ── Flags ────────────────────────────────────────────────── */}
-      <section className="rise d3 elev rounded-3xl border border-line bg-card p-6 sm:p-8">
+      <section className="rise d3 glass rounded-3xl p-6 sm:p-8">
         <h2 className="font-display text-xl text-ink">Scam signals</h2>
         {cleanFlags ? (
-          <div className="mt-4 rounded-2xl border border-go/30 bg-go-soft p-5">
+          <div className="mt-4 rounded-2xl border border-go/35 bg-go-soft p-5 shadow-[0_0_28px_-18px_var(--color-go)]">
             <p className="font-semibold text-go-ink">No major red flags turned up.</p>
             <p className="mt-1 text-sm text-ink-soft">
               That's not the same as "verified". Still confirm who the employer is, and never
@@ -380,7 +385,7 @@ export default function ResultView() {
 
       {/* ── Missing info + next action ───────────────────────────── */}
       <div className="rise d4 grid grid-cols-1 gap-7 lg:grid-cols-2">
-        <section className="elev rounded-3xl border border-line bg-card p-6 sm:p-8">
+        <section className="glass rounded-3xl p-6 sm:p-8">
           <h2 className="font-display text-xl text-ink">Before you commit</h2>
           {missing.length > 0 ? (
             <>
@@ -411,9 +416,9 @@ export default function ResultView() {
           )}
         </section>
 
-        <section className="elev flex flex-col rounded-3xl border border-line bg-card p-6 sm:p-8">
+        <section className="glass flex flex-col rounded-3xl p-6 sm:p-8">
           <h2 className="font-display text-xl text-ink">What to do next</h2>
-          <div className="mt-4 flex items-start gap-3 rounded-2xl bg-panel p-5">
+          <div className="glass-subtle mt-4 flex items-start gap-3 rounded-2xl p-5">
             <span className={`mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full ${verdict.dot}`} aria-hidden="true" />
             <p className="text-ink">{data.nextAction}</p>
           </div>
@@ -421,7 +426,7 @@ export default function ResultView() {
       </div>
 
       {/* ── Message generator ────────────────────────────────────── */}
-      <section className="rise d5 elev rounded-3xl border border-line bg-card p-6 sm:p-8">
+      <section className="rise d5 glass rounded-3xl p-6 sm:p-8">
         <h2 className="font-display text-xl text-ink">
           {data.usesClarification ? "Ask these questions first" : "Your application message prompt"}
         </h2>
@@ -434,32 +439,30 @@ export default function ResultView() {
           value={data.prompt}
           rows={10}
           aria-label="Generated prompt to copy"
-          className="mt-4 w-full resize-y rounded-2xl border border-line bg-paper p-4 font-mono text-sm leading-relaxed text-ink focus:border-brand focus:outline-none"
+          className="glass-subtle mt-4 w-full resize-y rounded-2xl p-4 font-mono text-sm leading-relaxed text-ink focus:border-brand focus:outline-none"
         />
-        <button
-          type="button"
+        <Button
+          variant={copied ? "success" : "ink"}
           onClick={copyPrompt}
-          className={`mt-3 inline-flex items-center gap-2 rounded-full px-5 py-2.5 font-semibold text-paper transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.99] focus-visible:outline-none ${
-            copied ? "bg-go" : "bg-ink hover:bg-ink-soft"
-          }`}
           aria-live="polite"
+          className="mt-3"
         >
-          <span aria-hidden="true">{copied ? "✓" : "⧉"}</span>
+          {copied ? (
+            <CheckIcon className="h-4 w-4" strokeWidth={2.5} />
+          ) : (
+            <CopyIcon className="h-4 w-4" />
+          )}
           {copied ? "Copied" : "Copy prompt"}
-        </button>
+        </Button>
       </section>
 
       {/* ── Save ─────────────────────────────────────────────────── */}
       {isPreview && (
-        <section className="rise d6 flex flex-col items-center gap-3 rounded-3xl border border-dashed border-line bg-card/60 p-6 text-center">
+        <section className="rise d6 flex flex-col items-center gap-3 rounded-3xl border border-dashed border-line bg-panel/40 p-6 text-center">
           <p className="text-ink-soft">Want to track this one and follow up later?</p>
-          <button
-            type="button"
-            onClick={handleSave}
-            className="rounded-full border border-brand bg-card px-6 py-3 font-semibold text-brand transition-all duration-200 hover:-translate-y-0.5 hover:bg-brand hover:text-paper active:translate-y-0 active:scale-[0.99] focus-visible:outline-none"
-          >
+          <Button variant="outline" size="lg" onClick={handleSave}>
             Save to tracker
-          </button>
+          </Button>
         </section>
       )}
 

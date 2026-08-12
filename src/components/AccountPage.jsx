@@ -4,6 +4,7 @@ import { useAuth } from "../auth.jsx";
 import { useApp } from "../store.jsx";
 import { downloadMessagePack } from "../lib/billing.js";
 import { trialState } from "../lib/entitlement.js";
+import Button from "./ui/Button.jsx";
 
 export default function AccountPage() {
   const { user, loading, backendEnabled, signInWithEmail, signOut, entitlement, tier, usageCount, aiCap, refreshEntitlement } = useAuth();
@@ -95,7 +96,7 @@ export default function AccountPage() {
           </p>
         </div>
 
-        <section className="elev rounded-3xl border border-line bg-card p-6 sm:p-8">
+        <section className="glass rounded-3xl p-6 sm:p-8">
           <h2 className="font-display text-xl text-ink">Sign in or create an account</h2>
           <p className="mt-1 text-sm text-ink-soft">
             We'll email you a one-tap link. No password needed.
@@ -131,13 +132,9 @@ export default function AccountPage() {
                 />
               </div>
               {error && <p className="text-sm text-stop-ink">{error}</p>}
-              <button
-                type="submit"
-                disabled={sending}
-                className="rounded-full bg-brand px-6 py-3 font-semibold text-paper transition-all duration-200 hover:-translate-y-0.5 hover:bg-brand-deep disabled:opacity-60"
-              >
+              <Button type="submit" size="lg" loading={sending}>
                 {sending ? "Sending link…" : "Send magic link"}
-              </button>
+              </Button>
             </form>
           )}
 
@@ -160,7 +157,7 @@ export default function AccountPage() {
       </div>
 
       {/* Pro access & Trial status */}
-      <section className="elev space-y-4 rounded-3xl border border-line bg-card p-6 sm:p-8">
+      <section className="glass space-y-4 rounded-3xl p-6 sm:p-8">
         <h2 className="font-display text-xl text-ink">Subscription & Pro Access</h2>
         
         {tier === "premium" ? (
@@ -187,15 +184,10 @@ export default function AccountPage() {
                   Expires {tState.expiresAt ? tState.expiresAt.toLocaleDateString() : "in 7 days"} ({tState.daysRemaining} day{tState.daysRemaining !== 1 ? "s" : ""} remaining)
                 </p>
               </div>
-              <Link
-                to="/offers"
-                className="rounded-full bg-brand px-5 py-2 text-sm font-semibold text-paper hover:bg-brand-deep transition-all"
-              >
-                Upgrade to Pro (₱299)
-              </Link>
+              <Button to="/offers">Upgrade to Pro (₱299)</Button>
             </div>
 
-            <div className="rounded-2xl border border-line bg-paper p-4 space-y-3">
+            <div className="glass-subtle rounded-2xl p-4 space-y-3">
               <p className="text-xs font-semibold uppercase tracking-wider text-ink-faint">Remaining Trial Allowances</p>
               <div className="grid grid-cols-2 gap-3 text-sm">
                 <div className="flex justify-between border-b border-line pb-1.5">
@@ -228,39 +220,37 @@ export default function AccountPage() {
                 ? "Your 7-day Pro Preview has expired. Upgrade to 30-Day Pro to keep using AI features."
                 : "You are currently on the free tier. Try Pro free for 7 days or upgrade."}
             </p>
-            <Link
-              to="/offers"
-              className="inline-block rounded-full bg-brand px-6 py-3 font-semibold text-paper transition-all duration-200 hover:-translate-y-0.5 hover:bg-brand-deep"
-            >
+            <Button to="/offers" size="lg">
               {tState.isExpired ? "Upgrade to Pro (₱299)" : "View Pro Plans"}
-            </Link>
+            </Button>
           </div>
         )}
       </section>
 
       {/* Purchased items / Message Pack */}
       {entitlement?.has_message_pack && (
-        <section className="elev space-y-4 rounded-3xl border border-line bg-card p-6 sm:p-8">
+        <section className="glass space-y-4 rounded-3xl p-6 sm:p-8">
           <h2 className="font-display text-xl text-ink">Purchased Items</h2>
-          <div className="rounded-2xl border border-line bg-paper p-4 flex items-center justify-between">
+          <div className="glass-subtle rounded-2xl p-4 flex items-center justify-between">
             <div>
               <p className="font-semibold text-ink">Message Pack</p>
               <p className="text-sm text-ink-soft">20 application & follow-up templates</p>
             </div>
-            <button
-              type="button"
+            <Button
+              variant="outline"
+              size="sm"
               onClick={handleDownloadPack}
-              disabled={downloadingPack}
-              className="rounded-full bg-brand/10 px-4 py-2 text-sm font-semibold text-brand transition-colors hover:bg-brand/20"
+              loading={downloadingPack}
+              className="border-brand/40"
             >
               {downloadingPack ? "Preparing…" : "Download PDF"}
-            </button>
+            </Button>
           </div>
         </section>
       )}
 
       {/* Cloud sync */}
-      <section className="elev space-y-4 rounded-3xl border border-line bg-card p-6 sm:p-8">
+      <section className="glass space-y-4 rounded-3xl p-6 sm:p-8">
         <h2 className="font-display text-xl text-ink">Cloud sync</h2>
         <p className="text-sm text-ink-soft">
           Your tracker has {jobs.length} job{jobs.length !== 1 ? "s" : ""}. Settings and jobs sync
@@ -269,14 +259,14 @@ export default function AccountPage() {
       </section>
 
       {/* Sign out */}
-      <section className="elev rounded-3xl border border-line bg-card p-6 sm:p-8">
-        <button
-          type="button"
+      <section className="glass rounded-3xl p-6 sm:p-8">
+        <Button
+          variant="danger"
           onClick={handleSignOut}
-          className="rounded-full border border-stop/40 bg-stop-soft px-5 py-2.5 text-sm font-semibold text-stop-ink transition-colors hover:border-stop"
+          className="border border-stop/40 bg-stop-soft hover:border-stop"
         >
           Sign out
-        </button>
+        </Button>
       </section>
 
       {/* Privacy & Legal links */}

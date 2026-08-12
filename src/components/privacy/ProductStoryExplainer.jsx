@@ -154,7 +154,7 @@ export default function ProductStoryExplainer() {
   return (
     <section
       ref={sectionRef}
-      className="scroll-reveal rounded-3xl border border-line bg-panel/50 p-6 sm:p-8"
+      className="scroll-reveal glass rounded-3xl p-6 sm:p-8"
       aria-label="How ApplyGuard helps you apply safely"
     >
       {/* ── heading ─────────────────────────────────── */}

@@ -7,13 +7,15 @@ import { useApp } from "../store.jsx";
 import { PLANS, AI_FEATURES } from "../lib/pricing.js";
 import { createPayPalOrder, capturePayPalOrder } from "../lib/billing.js";
 import { useReducedMotion } from "../motion/useMotionConfig.js";
-import { duration, easing } from "../motion/tokens.js";
+import { sheenSweep } from "../motion/variants.js";
+import Button from "./ui/Button.jsx";
+import { ArrowPathIcon, StarIcon, EnvelopeIcon } from "./ui/icons.jsx";
 import TrialLedger from "./TrialLedger.jsx";
 
 const TIER_CARDS = [
-  { ...PLANS.monthly, featured: false, icon: "🔄" },
-  { ...PLANS.yearly, featured: true, icon: "⭐" },
-  { ...PLANS.pack, featured: false, icon: "✉️" },
+  { ...PLANS.monthly, featured: false, Icon: ArrowPathIcon },
+  { ...PLANS.yearly, featured: true, Icon: StarIcon },
+  { ...PLANS.pack, featured: false, Icon: EnvelopeIcon },
 ];
 
 function OffersContent({ paypalConfigured }) {
@@ -61,8 +63,9 @@ function OffersContent({ paypalConfigured }) {
     <div className="space-y-8">
       <header>
         <p className="eyebrow">Plans & Pricing</p>
-        <h1 className="mt-2 font-display text-3xl text-ink sm:text-4xl">
-          Free scanner included. Upgrade to Pro for AI superpowers.
+        <h1 className="mt-2 font-display text-3xl sm:text-4xl">
+          <span className="text-ink">Free scanner included. </span>
+          <span className="text-gradient">Upgrade to Pro for AI superpowers.</span>
         </h1>
         <p className="mt-3 max-w-2xl text-ink-soft">
           The scanner, scam detection, tracker, and copy-prompts remain free forever. Pro unlocks tailored AI assistance for deep credibility scans, resume matching, outreach, and interview practice.
@@ -70,28 +73,29 @@ function OffersContent({ paypalConfigured }) {
 
         {/* 7-Day Pro Preview Banner */}
         {(!entitlement || entitlement.trial_status === "eligible") && (
-          <div className="mt-6 rounded-3xl border border-brand bg-brand/5 p-6 sm:p-8 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
+          <div className="glass gradient-border mt-6 rounded-3xl p-6 sm:p-8 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
             <div className="max-w-md">
-              <span className="rounded-full bg-brand px-3 py-1 text-xs font-semibold text-paper">Pro Preview</span>
+              <span className="btn-gradient rounded-full px-3 py-1 text-xs font-semibold text-paper">Pro Preview</span>
               <h2 className="mt-2 font-display text-2xl text-ink">Try ApplyGuard Pro free for 7 days</h2>
               <p className="mt-1 text-sm text-ink-soft">
                 Limited AI scans, resume tailoring, outreach assistance, and interview practice. No credit card required.
               </p>
-              <button
-                type="button"
+              <Button
+                size="lg"
+                className="mt-5"
                 onClick={() => {
                   if (!user) {
                     navigate("/account");
                     notify("Sign in to start your 7-day Pro Preview.", "info");
                   } else {
-                    navigate("/scan");
+                    // The scanner lives at the root route.
+                    navigate("/");
                     notify("Run your first AI request to automatically activate your 7-day Pro Preview.", "info");
                   }
                 }}
-                className="mt-5 rounded-full bg-brand px-6 py-3 font-semibold text-paper hover:bg-brand-deep transition-all duration-200"
               >
                 Start 7-Day Pro Preview
-              </button>
+              </Button>
             </div>
             <div className="w-full lg:w-80 shrink-0">
               <TrialLedger used={trialUsed} />
@@ -115,19 +119,18 @@ function OffersContent({ paypalConfigured }) {
       <div className="grid grid-cols-1 gap-5 md:grid-cols-3">
         {TIER_CARDS.map((plan, i) => (
           <div key={plan.id} style={{ animationDelay: `${0.07 * i}s` }}
-            className={`rise elev elev-hover relative flex flex-col rounded-3xl bg-card p-6 ${
-              plan.featured
-                ? "overflow-hidden border-2 border-brand ring-1 ring-brand/20 ring-offset-2 ring-offset-card shadow-sm shadow-brand/10"
-                : "border border-line"}`}>
+            className={`rise glass elev-hover relative flex flex-col rounded-3xl p-6 ${
+              plan.featured ? "gradient-border glow-brand overflow-hidden border-brand/60" : ""
+            }`}>
             {/* Pro Pass: one controlled border-light traversal on enter-view — never a constant pulse */}
             {plan.featured && !reduced && (
               <m.span
                 aria-hidden="true"
-                className="pointer-events-none absolute inset-y-0 -left-1/3 w-1/3 bg-gradient-to-r from-transparent via-brand/15 to-transparent"
-                initial={{ x: 0 }}
-                whileInView={{ x: "460%" }}
+                className="pointer-events-none absolute inset-y-0 -left-1/3 w-1/3 bg-gradient-to-r from-transparent via-brand/25 to-transparent"
+                variants={sheenSweep}
+                initial="rest"
+                whileInView="sweep"
                 viewport={{ once: true, amount: 0.5 }}
-                transition={{ duration: duration.reveal * 1.7, ease: easing.enter, delay: 0.25 }}
               />
             )}
             {/* Pro Pass: small green entitlement seal */}
@@ -142,10 +145,12 @@ function OffersContent({ paypalConfigured }) {
               </span>
             )}
             {plan.featured && (
-              <span className="mb-3 w-fit rounded-full bg-brand px-3 py-1 text-xs font-semibold text-paper">Best value</span>
+              <span className="btn-gradient mb-3 w-fit rounded-full px-3 py-1 text-xs font-semibold text-paper">Best value</span>
             )}
-            <div className="flex items-center gap-2">
-              <span className="text-2xl" aria-hidden="true">{plan.icon}</span>
+            <div className="flex items-center gap-2.5">
+              <span className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-brand/30 bg-brand/10 text-brand-lift" aria-hidden="true">
+                <plan.Icon className="h-4.5 w-4.5" strokeWidth={1.8} />
+              </span>
               <h2 className="font-display text-2xl text-ink">{plan.name}</h2>
             </div>
             <div className="mt-1 flex items-baseline gap-1.5">
@@ -158,7 +163,7 @@ function OffersContent({ paypalConfigured }) {
               <ul className="mt-4 flex-1 space-y-2 text-sm text-ink">
                 {AI_FEATURES.map((f) => (
                   <li key={f.id} className="flex items-start gap-2">
-                    <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-brand" aria-hidden="true" />
+                    <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-brand-lift" aria-hidden="true" />
                     <span>{f.name}</span>
                   </li>
                 ))}
@@ -173,27 +178,27 @@ function OffersContent({ paypalConfigured }) {
 
             <div className="mt-6 flex flex-col gap-2">
               {!user ? (
-                <button type="button"
+                <Button
+                  variant={plan.featured ? "primary" : "outline"}
+                  size="lg"
+                  className="w-full"
                   onClick={() => {
                     navigate("/account");
                     notify("Sign in first to upgrade to Pro.", "info");
                   }}
-                  className={`w-full rounded-full px-5 py-3 text-center font-semibold transition-all duration-200 ${
-                    plan.featured
-                      ? "bg-brand text-paper hover:-translate-y-0.5 hover:bg-brand-deep"
-                      : "border border-brand bg-card text-brand hover:bg-brand hover:text-paper"}`}>
+                >
                   Sign in to buy
-                </button>
+                </Button>
               ) : currentTier === "premium" && plan.id !== "pack" ? (
                 <button type="button" disabled
-                  className="w-full rounded-full px-5 py-3 text-center font-semibold bg-panel text-ink-faint border border-line cursor-not-allowed">
+                  className="glass-subtle w-full rounded-full px-5 py-3 text-center font-semibold text-ink-faint cursor-not-allowed">
                   Already Active
                 </button>
               ) : paymentsEnabled && (
                 <div className="w-full">
-                  {checkingOut === plan.id && <p className="mb-2 text-center text-sm font-medium text-brand">Processing payment…</p>}
+                  {checkingOut === plan.id && <p className="mb-2 text-center text-sm font-medium text-brand-lift">Processing payment…</p>}
                   <PayPalButtons 
-                    style={{ layout: "horizontal", height: 48, color: "gold", shape: "pill" }}
+                    style={{ layout: "horizontal", height: 48, color: "white", shape: "pill" }}
                     createOrder={async () => {
                       setCheckingOut(plan.id);
                       return await createPayPalOrder(plan.id);
@@ -214,7 +219,7 @@ function OffersContent({ paypalConfigured }) {
 
       <p className="text-sm text-ink-soft">
         Looking for the free tool?{" "}
-        <Link to="/" className="font-medium text-brand hover:text-brand-deep">Go back and scan a job</Link>.
+        <Link to="/" className="font-medium text-brand-lift transition-colors hover:text-brand">Go back and scan a job</Link>.
       </p>
     </div>
   );

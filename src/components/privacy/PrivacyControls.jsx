@@ -27,7 +27,7 @@ export default function PrivacyControls({
         onClick={onTogglePlay}
         aria-pressed={playing}
         aria-label={playing ? "Pause animation" : "Play animation"}
-        className="inline-flex h-9 items-center gap-1.5 rounded-full border border-line bg-card px-3.5 text-xs font-medium text-ink transition-colors hover:border-brand/40 hover:text-brand focus-visible:outline-2 focus-visible:outline-brand focus-visible:outline-offset-2"
+        className="glass-subtle inline-flex h-9 items-center gap-1.5 rounded-full px-3.5 text-xs font-medium text-ink transition-colors hover:border-brand/40 hover:text-brand-lift focus-visible:outline-2 focus-visible:outline-brand focus-visible:outline-offset-2"
       >
         {playing ? (
           <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
@@ -46,7 +46,7 @@ export default function PrivacyControls({
         type="button"
         onClick={onReplay}
         aria-label="Replay animation"
-        className="inline-flex h-9 items-center gap-1.5 rounded-full border border-line bg-card px-3.5 text-xs font-medium text-ink transition-colors hover:border-brand/40 hover:text-brand focus-visible:outline-2 focus-visible:outline-brand focus-visible:outline-offset-2"
+        className="glass-subtle inline-flex h-9 items-center gap-1.5 rounded-full px-3.5 text-xs font-medium text-ink transition-colors hover:border-brand/40 hover:text-brand-lift focus-visible:outline-2 focus-visible:outline-brand focus-visible:outline-offset-2"
       >
         <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
           <path d="M3 12a9 9 0 119 9" />
@@ -70,7 +70,7 @@ export default function PrivacyControls({
                 : ch.key === "tracker"
                   ? "border-brand/50 bg-brand/10 text-brand"
                   : "border-brand/50 bg-go-soft text-brand"
-              : "border-line bg-card text-ink-soft hover:border-ink/20 hover:text-ink"
+              : "glass-subtle text-ink-soft hover:border-brand/40 hover:text-ink"
           }`}
         >
           {ch.label}

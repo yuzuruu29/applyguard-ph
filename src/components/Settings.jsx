@@ -2,6 +2,7 @@ import { useRef, useState } from "react";
 import { useApp } from "../store.jsx";
 import { backup, SCHEMA_VERSION } from "../lib/storage.js";
 import { jobsToCSV } from "../lib/csv.js";
+import { ThemeChoice } from "./ui/ThemeToggle.jsx";
 
 function download(filename, content, mime) {
   const blob = new Blob([content], { type: mime });
@@ -17,7 +18,9 @@ function download(filename, content, mime) {
 
 const today = () => new Date().toISOString().slice(0, 10);
 const inputCls =
-  "w-full rounded-xl border border-line bg-card px-3.5 py-2.5 text-ink placeholder:text-ink-faint focus:border-brand focus:outline-none";
+  "field-input w-full rounded-xl border border-line bg-paper/50 px-3.5 py-2.5 text-ink placeholder:text-ink-faint focus:border-brand focus:outline-none";
+const tileCls =
+  "glass-subtle spotlight rounded-2xl px-5 py-4 text-left transition-all duration-300 hover:-translate-y-0.5 hover:border-brand/60";
 
 export default function Settings() {
   const { settings, jobs, updateSettings, restoreState, resetAll, notify } = useApp();
@@ -87,8 +90,19 @@ export default function Settings() {
         </p>
       </div>
 
+      {/* Appearance */}
+      <section className="glass space-y-4 rounded-3xl p-6 sm:p-8">
+        <div>
+          <h2 className="font-display text-xl text-ink">Appearance</h2>
+          <p className="mt-1 text-sm text-ink-soft">
+            Stored on this device only, separate from your saved jobs.
+          </p>
+        </div>
+        <ThemeChoice />
+      </section>
+
       {/* Preferences */}
-      <section className="elev space-y-5 rounded-3xl border border-line bg-card p-6 sm:p-8">
+      <section className="glass space-y-5 rounded-3xl p-6 sm:p-8">
         <h2 className="font-display text-xl text-ink">Your preferences</h2>
 
         <div>
@@ -143,7 +157,7 @@ export default function Settings() {
       </section>
 
       {/* Data safety */}
-      <section className="elev space-y-5 rounded-3xl border border-line bg-card p-6 sm:p-8">
+      <section className="glass space-y-5 rounded-3xl p-6 sm:p-8">
         <div>
           <h2 className="font-display text-xl text-ink">Your data</h2>
           <p className="mt-1 text-sm text-ink-soft">
@@ -153,29 +167,17 @@ export default function Settings() {
         </div>
 
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <button
-            type="button"
-            onClick={handleBackup}
-            className="rounded-2xl border border-line bg-paper px-5 py-4 text-left transition-colors hover:border-brand"
-          >
+          <button type="button" onClick={handleBackup} className={tileCls}>
             <span className="block font-semibold text-ink">Back up (JSON)</span>
             <span className="text-sm text-ink-soft">Download a full copy of your data.</span>
           </button>
 
-          <button
-            type="button"
-            onClick={() => fileRef.current?.click()}
-            className="rounded-2xl border border-line bg-paper px-5 py-4 text-left transition-colors hover:border-brand"
-          >
+          <button type="button" onClick={() => fileRef.current?.click()} className={tileCls}>
             <span className="block font-semibold text-ink">Restore from backup</span>
             <span className="text-sm text-ink-soft">Load a JSON file you saved before.</span>
           </button>
 
-          <button
-            type="button"
-            onClick={handleExportCSV}
-            className="rounded-2xl border border-line bg-paper px-5 py-4 text-left transition-colors hover:border-brand"
-          >
+          <button type="button" onClick={handleExportCSV} className={tileCls}>
             <span className="block font-semibold text-ink">Export jobs (CSV)</span>
             <span className="text-sm text-ink-soft">Open your saved jobs in a spreadsheet.</span>
           </button>
@@ -183,7 +185,7 @@ export default function Settings() {
           <button
             type="button"
             onClick={handleReset}
-            className="rounded-2xl border border-stop/40 bg-stop-soft px-5 py-4 text-left transition-colors hover:border-stop"
+            className="rounded-2xl border border-stop/40 bg-stop-soft px-5 py-4 text-left transition-all duration-300 hover:-translate-y-0.5 hover:border-stop"
           >
             <span className="block font-semibold text-stop-ink">Reset everything</span>
             <span className="text-sm text-ink-soft">Wipe settings and all saved jobs.</span>

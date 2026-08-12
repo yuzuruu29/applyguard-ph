@@ -42,3 +42,19 @@ export const spring = {
   gentle: { type: "spring", stiffness: 180, damping: 22, mass: 0.9 },
   snappy: { type: "spring", stiffness: 320, damping: 30 },
 };
+
+// Ambient layer (the aurora backdrop and the trust marquee). The loop
+// durations themselves live in index.css because those are pure CSS
+// animations — duplicating them here would only let the two drift apart.
+// These are the values JavaScript actually reads.
+const PARALLAX_SHIFT = -110; // px the aurora layer travels across that range
+
+export const ambientScroll = {
+  parallaxRange: 1200, // px of page scroll mapped to the full aurora shift
+  parallaxShift: PARALLAX_SHIFT,
+  // How much taller than the viewport the aurora layer is drawn. The layer is
+  // clipped to its own box, so if it can travel further than it overhangs, the
+  // shift drags its bottom edge into view as a hard seam across the glow.
+  // Must stay strictly greater than the shift — motion.test.js enforces it.
+  parallaxSlack: Math.abs(PARALLAX_SHIFT) + 40,
+};
