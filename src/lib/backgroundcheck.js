@@ -3,8 +3,10 @@
 // The AI-powered deep check is handled server-side via the "backgroundcheck"
 // feature in ai-proxy (premium tier).
 
+import { todayLocalISO } from "./followups.js";
+
 const DAILY_FREE_LIMIT = 3;
-const STORAGE_KEY = "ag_bgcheck_usage";
+export const STORAGE_KEY = "ag_bgcheck_usage";
 
 // ── Risky TLDs commonly associated with scam job posts ──────────────
 const RISKY_TLDS = new Set([
@@ -169,9 +171,12 @@ export function analyzeUrl(input) {
 }
 
 // ── Daily free-tier limit (localStorage) ────────────────────────────
+// The "day" is the user's local calendar day (e.g. midnight in the
+// Philippines), matching todayLocalISO() used by follow-ups and stats —
+// NOT UTC, which would reset the limit at 8 AM PH time.
 
 function todayKey() {
-  return new Date().toISOString().slice(0, 10);
+  return todayLocalISO();
 }
 
 export function getFreeChecksUsed() {
