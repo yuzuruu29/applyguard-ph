@@ -11,6 +11,7 @@ import { sheenSweep } from "../motion/variants.js";
 import Button from "./ui/Button.jsx";
 import { ArrowPathIcon, StarIcon, EnvelopeIcon } from "./ui/icons.jsx";
 import TrialLedger from "./TrialLedger.jsx";
+import PremiumShowcaseVideo from "./PremiumShowcaseVideo.jsx";
 
 const TIER_CARDS = [
   { ...PLANS.monthly, featured: false, Icon: ArrowPathIcon },
@@ -114,6 +115,15 @@ function OffersContent({ paypalConfigured }) {
           </p>
         )}
       </header>
+
+      {/* The Remotion Premium showcase — five features, one real application */}
+      <div>
+        <p className="eyebrow">Premium in action</p>
+        <h2 className="mt-2 mb-4 font-display text-2xl text-ink">
+          Watch what Premium adds — including the voice mock interview
+        </h2>
+        <PremiumShowcaseVideo />
+      </div>
 
       {/* Tier Breakdown Cards */}
       <div className="grid grid-cols-1 gap-5 md:grid-cols-3">

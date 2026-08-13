@@ -4,6 +4,13 @@
   "private": true,
   "scripts": {
     "studio": "remotion studio",
+    "render:ad": "remotion render MarketingAd out/marketing-ad.mp4 --codec h264 --scale=1.2",
+    "render:ad:vertical": "remotion render MarketingAdVertical out/marketing-ad-vertical.mp4 --codec h264",
+    "render:ad:poster": "remotion still MarketingAd out/marketing-ad-poster.jpeg --frame 1865 --scale=1.2",
+    "render:premium": "remotion render PremiumShowcaseDesktop out/premium-showcase-desktop.mp4 --codec h264",
+    "render:premium:mobile": "remotion render PremiumShowcaseMobile out/premium-showcase-mobile.mp4 --codec h264",
+    "render:premium:poster": "remotion still PremiumShowcaseDesktop out/premium-showcase-poster-desktop.jpeg --frame 120",
+    "render:premium:poster:mobile": "remotion still PremiumShowcaseMobile out/premium-showcase-poster-mobile.jpeg --frame 120",
     "render:desktop": "remotion render ApplyGuardProductStoryDesktop out/desktop.mp4 --codec h264",
     "render:desktop:webm": "remotion render ApplyGuardProductStoryDesktop out/desktop.webm --codec vp8",
     "render:mobile": "remotion render ApplyGuardProductStoryMobile out/mobile.mp4 --codec h264",
