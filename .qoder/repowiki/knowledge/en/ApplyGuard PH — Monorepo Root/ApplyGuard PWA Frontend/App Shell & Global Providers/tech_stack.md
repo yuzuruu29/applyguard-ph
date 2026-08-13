@@ -1,0 +1,1 @@
+React 19 via `react-dom/client` `createRoot`, `react-router-dom` for client-side routing, Tailwind CSS v4 (`@import "tailwindcss"` + `@theme`) for design tokens, Supabase JS client for auth/entitlements, Capacitor plugins (`status-bar`, `splash-screen`) loaded lazily for iOS/Android builds, and a browser Service Worker registered at `/sw.js` for PWA offline/installability.

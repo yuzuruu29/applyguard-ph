@@ -1,0 +1,199 @@
+{
+  "summary": {
+    "projectName": "ApplyGuard PH",
+    "locale": "en",
+    "modelId": "agent-work-loop-v4",
+    "reportContractVersion": 24,
+    "overview": "ApplyGuard PH has a clear public README, 10 unit-test files for pure-logic modules, and a Supabase CI pipeline, but lacks agent-oriented guidance, environment pinning, and delivery-side validation, making agent work heavily reliant on implicit knowledge and unchecked changes.",
+    "aiAgentPractice": {
+      "inspectedSurfaces": [
+        "Rules",
+        "Skills",
+        "Hooks"
+      ],
+      "coverageRows": [
+        {
+          "surface": "Rules",
+          "scopes": [
+            "Project"
+          ],
+          "count": 0,
+          "paths": []
+        },
+        {
+          "surface": "Skills",
+          "scopes": [
+            "Project"
+          ],
+          "count": 0,
+          "paths": []
+        },
+        {
+          "surface": "Hooks",
+          "scopes": [
+            "Project",
+            "Global"
+          ],
+          "count": 0,
+          "paths": []
+        }
+      ]
+    },
+    "suggestions": [
+      {
+        "id": "scaffold-agent-entrypoint",
+        "kind": "loop-candidate",
+        "title": "Create an agent entrypoint (AGENTS.md)",
+        "reason": "The project has no agent-oriented guidance; adding an entrypoint would let agents find the right context, risk areas, and test routes without manual discovery or human handoffs.",
+        "confidence": "Medium",
+        "owner": "Project maintainer",
+        "nextStep": "Write a short AGENTS.md (80-120 lines) that maps source directories, identifies high-risk areas (payments, data deletion, auth), and lists validation commands by scope.",
+        "validation": "Agent can open AGENTS.md and find the correct test command, deployment path, and payment-risk warning."
+      },
+      {
+        "id": "add-test-ci-gate",
+        "kind": "loop-candidate",
+        "title": "Add Vitest run to CI workflow",
+        "reason": "The Supabase CI deploys edge functions but never runs the frontend test suite; a test failure on main has no automated safety net.",
+        "confidence": "High",
+        "owner": "Project maintainer",
+        "nextStep": "Add a `npm test` step to .github/workflows/supabase.yml before deployment, or create a separate frontend CI workflow.",
+        "validation": "Pushing a failing test to a PR branch produces a non-zero exit and visible CI failure."
+      },
+      {
+        "id": "pin-node-version",
+        "kind": "try-existing",
+        "title": "Add .nvmrc for reproducible runtime",
+        "reason": "Netlify uses NODE_VERSION=20 in netlify.toml, but no project-level pin exists for local or CI environments, creating implicit version assumptions.",
+        "confidence": "High",
+        "owner": "Project maintainer",
+        "nextStep": "Create .nvmrc with the Node version that matches netlify.toml (20) and verify local dev still works.",
+        "validation": "`node --version` matches the pinned version after `nvm use` (or the agent reads .nvmrc before install commands)."
+      }
+    ],
+    "assignmentSummaries": [],
+    "dimensions": [
+      {
+        "id": "task-understanding",
+        "label": "Task Understanding",
+        "score": 45,
+        "summary": "Human-oriented README covers architecture well, but no agent entrypoint (AGENTS.md, CLAUDE.md) exists; risk areas and task routes are undocumented for agent readers.",
+        "findingRefs": [
+          "agent-instructions-missing"
+        ]
+      },
+      {
+        "id": "controlled-execution",
+        "label": "Controlled Execution",
+        "score": 60,
+        "summary": "Package.json scripts are clear and lockfile is present, but no .nvmrc, no devcontainer, and no state-reset or doctor commands; environment assumptions remain partly implicit.",
+        "findingRefs": [
+          "missing-runtime-pin"
+        ]
+      },
+      {
+        "id": "change-validation",
+        "label": "Change Validation",
+        "score": 52,
+        "summary": "10 well-structured unit-test files cover core logic; however, no fast/slow test separation, no integration or E2E tests, and CI does not run the test suite before deployment.",
+        "findingRefs": [
+          "no-frontend-ci-validation",
+          "no-integration-e2e-tests"
+        ]
+      },
+      {
+        "id": "reliable-delivery",
+        "label": "Reliable Delivery",
+        "score": 48,
+        "summary": "Supabase Edge Function CI enforces deployment, but frontend has no CI gate; payment verification has server-side validation but no observable rollback plan or approval path for agent-produced changes.",
+        "findingRefs": [
+          "no-recovery-plan-for-payment-state"
+        ]
+      },
+      {
+        "id": "learning-capture",
+        "label": "Learning Capture",
+        "score": 35,
+        "summary": "No .qoder directory, project skills, hooks, or memory configuration; the reviewed window is clean of candidates but also lacks any mechanism for lifecycle detection or reuse.",
+        "findingRefs": []
+      }
+    ]
+  },
+  "findings": [
+    {
+      "id": "agent-instructions-missing",
+      "title": "No agent entrypoint or scoped guidance for task routing",
+      "severity": "High",
+      "reason": "The project has no AGENTS.md, CLAUDE.md, or equivalent agent guidance. The README (148 lines) serves a human audience. An agent must infer project boundaries, risk areas (payment verification, data deletion, AI proxy keys), and validation routes by scanning the full repository, which increases the chance of incorrect scope, missing test requirements, or unsafe operations.",
+      "expectedOutput": [
+        "Add AGENTS.md with directory map, risk areas, validations-per-scope, and deployment notes.",
+        "Agent can find the correct test command, deployment path, and payment-risk warning from the entrypoint."
+      ],
+      "expectedArtifact": "AGENTS.md",
+      "aiFixPrompt": "/better-loop fix this issue\n\nAdd a project-level AGENTS.md that maps src/ and supabase/ directories, flags high-risk areas (payment verification, data deletion, auth), and lists validation commands by scope.",
+      "dimensionRefs": [
+        "task-understanding"
+      ]
+    },
+    {
+      "id": "no-frontend-ci-validation",
+      "title": "Frontend unit tests never run in CI",
+      "severity": "High",
+      "reason": "The only CI workflow (supabase.yml) deploys Supabase Edge Functions but does not run `npm test` for the 10 frontend unit-test files. A regression in core scoring, red-flag, or entitlement logic can reach main without automated detection.",
+      "expectedOutput": [
+        "Add test step (npm test) to CI workflow.",
+        "Pushing a failing test produces a non-zero exit and visible CI failure."
+      ],
+      "expectedArtifact": ".github/workflows/supabase.yml",
+      "aiFixPrompt": "/better-loop fix this issue\n\nAdd a `npm test` step before the deployment steps in .github/workflows/supabase.yml so that unit tests run on every push to the supabase/functions path.",
+      "dimensionRefs": [
+        "change-validation"
+      ]
+    },
+    {
+      "id": "missing-runtime-pin",
+      "title": "Node.js runtime version not pinned at project root",
+      "severity": "Medium",
+      "reason": "Netlify config pins NODE_VERSION=20 in netlify.toml, but there is no .nvmrc or .tool-versions at the project root. Package.json engines field is absent. This creates implicit, unverifiable runtime assumptions for local dev and CI environments.",
+      "expectedOutput": [
+        "Create .nvmrc with Node engine version matching netlify.toml (20.x).",
+        "Explicit runtime constraint for agent setup and CI."
+      ],
+      "expectedArtifact": ".nvmrc",
+      "aiFixPrompt": "/better-loop fix this issue\n\nCreate a .nvmrc file matching the Node version from netlify.toml (NODE_VERSION = \"20\").",
+      "dimensionRefs": [
+        "controlled-execution"
+      ]
+    },
+    {
+      "id": "no-integration-e2e-tests",
+      "title": "No integration or E2E test coverage for critical user flows",
+      "severity": "Medium",
+      "reason": "All 10 test files are unit tests targeting pure functions. The scan → score → verdict → save flow, cloud sync, payment flows, and SPA routing have no integration or E2E coverage. An agent changing React components, routing, or storage has no automated way to verify the end-to-end behavior still works.",
+      "expectedOutput": [
+        "Add integration test covering the end-to-end scan flow.",
+        "Agent can run a flow-level test to validate behavior after changes."
+      ],
+      "expectedArtifact": "Integration test file(s)",
+      "aiFixPrompt": "/better-loop fix this issue\n\nAdd a Playwright or Vitest integration test for the scan→score→verdict→save flow. Place it at src/lib/flow.test.js and verify it exercises the core pipeline.",
+      "dimensionRefs": [
+        "change-validation"
+      ]
+    },
+    {
+      "id": "no-recovery-plan-for-payment-state",
+      "title": "Payment and data-deletion recovery has no documented owner route",
+      "severity": "Medium",
+      "reason": "The project handles live PayPal payments and user data in Supabase. The README describes server-side verification and webhook fulfillment, but there is no documented rollback, recovery, or escalation plan for agent-facing payment operations, failed captures, or accidental data deletion. An agent has no owned route to follow on recovery.",
+      "expectedOutput": [
+        "Add recovery/rollback documentation covering payment capture failure, webhook reconciliation, and data restoration.",
+        "Agent can find the owned recovery route after a payment failure."
+      ],
+      "expectedArtifact": "Recovery documentation",
+      "aiFixPrompt": "/better-loop fix this issue\n\nAdd a recovery section either in a new AGENTS.md or docs/ directory that covers: (1) what to do on PayPal capture failure, (2) how to reconcile webhook delivery gaps, (3) how to restore user data from Supabase. Keep it actionable for an agent operator.",
+      "dimensionRefs": [
+        "reliable-delivery"
+      ]
+    }
+  ]
+}

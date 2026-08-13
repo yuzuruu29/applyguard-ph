@@ -5,6 +5,28 @@ import { calculateHaikuCostUsd, DAILY_BUDGET_CIRCUIT_BREAKER, DAILY_BUDGET_WARNI
 const NOW = new Date("2026-07-23T10:00:00Z");
 
 describe("Trial & Usage System Unit Tests", () => {
+  describe("effectiveTier and Entitlement Expiration", () => {
+    it("paid access overrides trial limits in effectiveTier when current_period_end is in future", () => {
+      const entitlement = {
+        tier: "premium",
+        status: "active",
+        current_period_end: "2026-08-23",
+        trial_status: "converted",
+      };
+      expect(effectiveTier(entitlement, NOW)).toBe("premium");
+    });
+
+    it("returns free when current_period_end is null or missing", () => {
+      expect(effectiveTier({ tier: "premium", status: "active", current_period_end: null }, NOW)).toBe("free");
+      expect(effectiveTier({ tier: "premium", status: "active", current_period_end: undefined }, NOW)).toBe("free");
+      expect(effectiveTier({ tier: "premium", status: "active" }, NOW)).toBe("free");
+    });
+
+    it("returns free when current_period_end is in the past", () => {
+      expect(effectiveTier({ tier: "premium", status: "active", current_period_end: "2026-07-22" }, NOW)).toBe("free");
+    });
+  });
+
   describe("trialState function", () => {
     it("returns eligible status for default user entitlement", () => {
       const state = trialState({ trial_status: "eligible" }, NOW);
@@ -34,16 +56,6 @@ describe("Trial & Usage System Unit Tests", () => {
       expect(state.isConverted).toBe(true);
       expect(state.isTrialActive).toBe(false);
     });
-
-    it("paid access overrides trial limits in effectiveTier", () => {
-      const entitlement = {
-        tier: "premium",
-        status: "active",
-        current_period_end: "2026-08-23",
-        trial_status: "converted",
-      };
-      expect(effectiveTier(entitlement, NOW)).toBe("premium");
-    });
   });
 
   describe("Phase 5 & 6 Budget, Pricing & Abuse Control Tests", () => {
@@ -68,10 +80,11 @@ describe("Trial & Usage System Unit Tests", () => {
 
   describe("Trial Feature Quotas & Allowances", () => {
     it("defines correct feature allowances for trial period", () => {
-      expect(TRIAL_ALLOWANCES.deep_scan).toBe(3);
+      expect(TRIAL_ALLOWANCES.message).toBe(5);
+      expect(TRIAL_ALLOWANCES.deepscan).toBe(3);
       expect(TRIAL_ALLOWANCES.resume).toBe(2);
-      expect(TRIAL_ALLOWANCES.outreach).toBe(5);
-      expect(TRIAL_ALLOWANCES.mock_interview).toBe(1);
+      expect(TRIAL_ALLOWANCES.interview).toBe(1);
+      expect(TRIAL_ALLOWANCES.interview_voice).toBe(1);
       expect(TRIAL_ALLOWANCES.backgroundcheck).toBe(2);
     });
   });

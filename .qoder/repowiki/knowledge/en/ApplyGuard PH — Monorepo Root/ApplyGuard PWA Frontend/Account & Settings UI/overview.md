@@ -1,0 +1,1 @@
+React pages for user account management (magic-link sign-in, premium status, cloud sync) and local settings with backup/restore/export controls.

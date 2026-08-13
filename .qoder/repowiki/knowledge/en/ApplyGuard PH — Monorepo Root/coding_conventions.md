@@ -1,0 +1,2 @@
+- Tests live alongside source files using the `.test.{js,jsx}` suffix and are discovered by Vitest through the root `vite.config.js` include patterns.
+- All build/runtime configuration is centralized at the repo root (`vite.config.js`, `capacitor.config.ts`, `netlify.toml`, `vercel.json`) rather than per-child.

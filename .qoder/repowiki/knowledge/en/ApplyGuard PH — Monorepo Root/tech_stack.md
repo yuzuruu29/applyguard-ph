@@ -1,0 +1,1 @@
+Vite 8 + React 19 + Tailwind CSS v4 as the shared build stack across the SPA and its unit tests; Capacitor 8 for iOS/Android packaging of the same `dist`; Supabase Edge Functions (Node) deployed via the `supabase` CLI; Netlify and Vercel as interchangeable static-hosting backends.

@@ -1,0 +1,17 @@
+schema_version: 1
+module_path: frontend_app/app_shell
+title: App Shell & Global Providers
+scope:
+    - src/App.jsx
+    - src/main.jsx
+    - src/store.jsx
+    - src/auth.jsx
+    - src/mobile.js
+    - src/index.css
+source_files: []
+depends_on: []
+related_to:
+    - path: frontend_app/account_settings
+    - path: frontend_app/interview_pages
+    - path: frontend_app/interview_tracker
+    - path: frontend_app/public_assets

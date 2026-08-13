@@ -3,8 +3,10 @@
 // The AI-powered deep check is handled server-side via the "backgroundcheck"
 // feature in ai-proxy (premium tier).
 
+import { todayLocalISO } from "./followups.js";
+
 const DAILY_FREE_LIMIT = 3;
-const STORAGE_KEY = "ag_bgcheck_usage";
+export const STORAGE_KEY = "ag_bgcheck_usage";
 
 // ── Risky TLDs commonly associated with scam job posts ──────────────
 const RISKY_TLDS = new Set([
@@ -169,9 +171,12 @@ export function analyzeUrl(input) {
 }
 
 // ── Daily free-tier limit (localStorage) ────────────────────────────
+// The "day" is the user's local calendar day (e.g. midnight in the
+// Philippines), matching todayLocalISO() used by follow-ups and stats —
+// NOT UTC, which would reset the limit at 8 AM PH time.
 
 function todayKey() {
-  return new Date().toISOString().slice(0, 10);
+  return todayLocalISO();
 }
 
 export function getFreeChecksUsed() {
@@ -201,3 +206,53 @@ export function canUseFreeCheck() {
 }
 
 export { DAILY_FREE_LIMIT };
+
+// ── Shareable plain-text report ─────────────────────────────────────
+// One source of truth for verdict wording, shared by the UI and the
+// copy-to-clipboard report so they can never drift apart.
+
+export const VERDICT_LABELS = {
+  credible: "Looks credible",
+  caution: "Proceed with caution",
+  suspicious: "Suspicious — investigate first",
+  invalid: "Invalid URL",
+};
+
+/**
+ * Build a plain-text summary of an analyzeUrl() result, suitable for pasting
+ * into a chat or group thread. Mirrors lib/share's shareSummary voice.
+ * Serious (hard) flags list before caution (soft) flags.
+ *
+ * @param {object} result — return value of analyzeUrl()
+ * @returns {string}
+ */
+export function formatCheckReport(result = {}) {
+  const meta = result.meta || {};
+  const label = VERDICT_LABELS[result.verdict] || VERDICT_LABELS.invalid;
+  const score = typeof result.score === "number" ? result.score : 0;
+
+  const lines = ["ApplyGuard PH link check"];
+  if (meta.input) lines.push(`Link: ${meta.input}`);
+  if (meta.domain) lines.push(`Domain: ${meta.domain}`);
+  lines.push(`Verdict: ${label} (${score}/100)`);
+
+  const positives = Array.isArray(result.positives) ? result.positives : [];
+  if (positives.length > 0) {
+    lines.push("", "Good signs:");
+    for (const p of positives) lines.push(`- ${p}`);
+  }
+
+  const signals = Array.isArray(result.signals) ? result.signals : [];
+  if (signals.length > 0) {
+    const hard = signals.filter((s) => s.severity === "hard");
+    const soft = signals.filter((s) => s.severity !== "hard");
+    lines.push("", "Watch out for:");
+    for (const s of hard) lines.push(`- (serious) ${s.text}`);
+    for (const s of soft) lines.push(`- (check) ${s.text}`);
+  } else if (result.verdict !== "invalid") {
+    lines.push("", "No URL-level flags found. Still verify the company independently.");
+  }
+
+  lines.push("", "Checked at applyguard.ph/background-check");
+  return lines.join("\n");
+}

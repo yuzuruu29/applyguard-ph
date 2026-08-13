@@ -1,0 +1,1 @@
+Service Worker Cache API (no library), Web App Manifest v2 with `share_target`, Capacitor mobile bridge, Netlify-style `_redirects` SPA fallback.

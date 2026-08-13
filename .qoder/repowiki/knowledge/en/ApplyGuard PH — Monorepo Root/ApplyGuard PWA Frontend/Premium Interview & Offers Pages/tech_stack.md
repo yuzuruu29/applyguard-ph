@@ -1,0 +1,1 @@
+React + React Router v6 (`useNavigate`, `useParams`, `Link`); browser Web APIs `navigator.mediaDevices.getUserMedia`, `SpeechRecognition`, `speechSynthesis`; Supabase JS client calling the `ai-proxy` Edge Function; PayPal integration via `@paypal/react-paypal-js` with server-side order capture through `lib/billing.js`.

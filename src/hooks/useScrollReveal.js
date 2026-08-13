@@ -17,6 +17,13 @@ export function useScrollReveal(deps = []) {
       return undefined;
     }
 
+    // Fallback: if IntersectionObserver is unavailable, reveal everything
+    // immediately so `.scroll-reveal` content is never left hidden.
+    if (typeof IntersectionObserver === "undefined") {
+      els.forEach((el) => el.classList.add("revealed"));
+      return undefined;
+    }
+
     const observer = new IntersectionObserver(
       (entries) => {
         for (const entry of entries) {

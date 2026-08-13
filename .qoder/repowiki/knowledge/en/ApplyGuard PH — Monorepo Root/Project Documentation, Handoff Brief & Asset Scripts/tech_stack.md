@@ -1,0 +1,1 @@
+ReportLab (Platypus) for PDF generation in the Message Pack script; VS Code Debug Adapter via `.claude/launch.json` targeting the Vite dev server on port 5173.

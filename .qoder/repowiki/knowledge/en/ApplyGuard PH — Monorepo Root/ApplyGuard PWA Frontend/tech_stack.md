@@ -1,0 +1,1 @@
+React 18 + Vite + react-router-dom for SPA routing; Tailwind CSS via utility classes; Supabase JS client for cloud auth/sync; Capacitor for mobile packaging; PWA via `navigator.serviceWorker.register('/sw.js')` and `public/manifest.webmanifest`.

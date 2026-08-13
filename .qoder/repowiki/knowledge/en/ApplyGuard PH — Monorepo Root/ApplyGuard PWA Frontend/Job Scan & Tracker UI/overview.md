@@ -1,0 +1,1 @@
+React components that let users paste a job post for in-browser scam/fit analysis, persist jobs with status and notes in the tracker, and optionally call AI features behind auth.

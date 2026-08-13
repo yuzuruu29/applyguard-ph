@@ -1,0 +1,1 @@
+Bootstraps the React application, wires routing and global providers (auth, app state), registers the PWA service worker, and initializes Capacitor for mobile builds.

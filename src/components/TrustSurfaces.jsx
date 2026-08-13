@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom";
+import { AlertTriangleIcon } from "./ui/icons.jsx";
 
 export function PrivacyPage() {
   return (
@@ -9,7 +9,7 @@ export function PrivacyPage() {
         <p className="mt-1 text-sm text-ink-faint">Last updated: July 23, 2026</p>
       </header>
 
-      <div className="elev rounded-3xl border border-line bg-card p-6 sm:p-8 space-y-4 text-ink-soft text-sm leading-relaxed">
+      <div className="glass rounded-3xl p-6 sm:p-8 space-y-4 text-ink-soft text-sm leading-relaxed">
         <h2 className="font-display text-xl text-ink">Client-First Privacy Design</h2>
         <p>
           ApplyGuard PH is designed privacy-first for Filipino remote job seekers. By default, job post scans and risk evaluations run locally in your browser. We do not store or transmit your raw job application text unless you explicitly invoke opt-in AI features.
@@ -40,7 +40,7 @@ export function TermsPage() {
         <p className="mt-1 text-sm text-ink-faint">Last updated: July 23, 2026</p>
       </header>
 
-      <div className="elev rounded-3xl border border-line bg-card p-6 sm:p-8 space-y-4 text-ink-soft text-sm leading-relaxed">
+      <div className="glass rounded-3xl p-6 sm:p-8 space-y-4 text-ink-soft text-sm leading-relaxed">
         <h2 className="font-display text-xl text-ink">Service Usage & Disclaimer</h2>
         <p>
           ApplyGuard PH provides job verification tools, scam signal detectors, and AI application assistance. ApplyGuard PH does not guarantee that a job offer or company is 100% legitimate and should not be treated as official legal advice.
@@ -64,7 +64,7 @@ export function RefundPage() {
         <p className="mt-1 text-sm text-ink-faint">Last updated: July 23, 2026</p>
       </header>
 
-      <div className="elev rounded-3xl border border-line bg-card p-6 sm:p-8 space-y-4 text-ink-soft text-sm leading-relaxed">
+      <div className="glass rounded-3xl p-6 sm:p-8 space-y-4 text-ink-soft text-sm leading-relaxed">
         <h2 className="font-display text-xl text-ink">100% Money-Back Guarantee</h2>
         <p>
           We want you to be completely satisfied. If you purchase 30-Day Pro (₱299), Annual Pro (₱2,990), or the Message Pack (₱149) and encounter technical issues or find that the product does not meet your expectations, you may request a full refund within 7 days of purchase.
@@ -88,13 +88,16 @@ export function DisclaimerPage() {
         <p className="mt-1 text-sm text-ink-faint">Last updated: July 23, 2026</p>
       </header>
 
-      <div className="elev rounded-3xl border border-line bg-card p-6 sm:p-8 space-y-4 text-ink-soft text-sm leading-relaxed">
+      <div className="glass rounded-3xl p-6 sm:p-8 space-y-4 text-ink-soft text-sm leading-relaxed">
         <h2 className="font-display text-xl text-ink">Risk Signals, Not Proof</h2>
         <p>
           ApplyGuard PH provides automated risk signals based on red-flag keywords, structural patterns, and AI analysis powered by Anthropic Haiku 4.5.
         </p>
-        <div className="rounded-2xl bg-warn-soft border border-warn/30 p-4 text-warn-ink font-medium">
-          ⚠️ Important Notice: ApplyGuard PH cannot definitively prove that a company or listing is 100% legitimate or guaranteed scam-free. Always conduct independent verification before sending sensitive personal data or government documents.
+        <div className="flex items-start gap-3 rounded-2xl bg-warn-soft border border-warn/30 p-4 text-warn-ink font-medium">
+          <AlertTriangleIcon className="mt-0.5 h-5 w-5 shrink-0" strokeWidth={2} />
+          <p>
+            Important Notice: ApplyGuard PH cannot definitively prove that a company or listing is 100% legitimate or guaranteed scam-free. Always conduct independent verification before sending sensitive personal data or government documents.
+          </p>
         </div>
       </div>
     </div>

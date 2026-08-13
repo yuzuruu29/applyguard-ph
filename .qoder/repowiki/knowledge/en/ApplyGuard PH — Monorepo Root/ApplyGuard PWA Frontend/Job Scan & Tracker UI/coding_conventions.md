@@ -1,0 +1,4 @@
+- UI state is owned locally inside the component while persistent data lives in the global store accessed via `useApp()`, with mutations dispatched as thin handlers (e.g. `onStatus` → `updateJob(id, { status })`).
+- User-facing messages are surfaced through the shared `notify(..., "info")` toast helper rather than inline alerts, except for destructive actions which use `window.confirm` before calling `deleteJob`.
+- Styling is exclusively Tailwind utility classes applied directly on JSX elements — no class-name variables or CSS-in-JS objects — with consistent spacing/typography tokens like `text-ink`, `bg-card`, `rounded-2xl`, and `font-display`.
+- Conditional rendering gates premium/AI features by checking `user` and `tier !== 'premium'` from `useAuth()` and returning an upgrade CTA section instead of rendering the feature UI.

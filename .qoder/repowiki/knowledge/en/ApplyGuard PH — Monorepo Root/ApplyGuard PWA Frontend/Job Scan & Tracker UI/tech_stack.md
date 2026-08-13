@@ -1,0 +1,1 @@
+React functional components with hooks (`useState`, `useEffect`, `useRef`); `react-router-dom` for navigation; Tailwind utility classes for all styling (no CSS files).

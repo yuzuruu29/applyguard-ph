@@ -5,10 +5,11 @@
 export const AI_MONTHLY_CAP = 60;
 
 export const TRIAL_ALLOWANCES = {
-  deep_scan: 3,
+  message: 5,
+  deepscan: 3,
   resume: 2,
-  outreach: 5,
-  mock_interview: 1,
+  interview: 1,
+  interview_voice: 1,
   backgroundcheck: 2,
 };
 
